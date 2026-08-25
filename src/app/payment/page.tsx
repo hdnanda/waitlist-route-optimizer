@@ -33,11 +33,13 @@ export default function PaymentPage() {
   };
 
   const handleVerify = () => {
-    if (otpDigits.some((d) => !d)) { setError("Enter all 4 digits."); return; }
+    if (otpDigits.some((d) => !d)) {
+      setError("Enter all 4 digits.");
+      return;
+    }
     setError("");
     setLoading(true);
     setTimeout(() => {
-      // Generate ticket and add to history
       const ticket: StoredTicket = {
         pnr: genPNR(),
         route: selectedOption?.route ?? "",
@@ -59,34 +61,40 @@ export default function PaymentPage() {
   };
 
   return (
-    <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="relative flex min-h-screen flex-col px-5 pb-8 pt-8">
-      <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-[#B9BDD1] mb-8">
-        <ArrowLeft className="h-4 w-4" /> Back
+    <motion.main
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative flex min-h-screen flex-col px-5 pb-16 pt-7 bg-black text-white"
+    >
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition mb-6"
+      >
+        <ArrowLeft className="h-4 w-4 text-[#E8A33D]" /> Back
       </button>
 
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#3F8F5F]/20">
-          <Lock className="h-6 w-6 text-[#3F8F5F]" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#080808] border border-[#E8A33D]/70 shadow-[0_0_12px_rgba(232,163,61,0.3)]">
+          <Lock className="h-6 w-6 text-[#E8A33D]" />
         </div>
         <div>
-          <h1 className="font-serif text-2xl font-semibold">Secure Payment</h1>
-          <p className="text-xs text-[#B9BDD1]">Mock OTP verification</p>
+          <h1 className="font-serif text-2xl font-bold text-white">Secure Payment</h1>
+          <p className="text-xs font-mono text-slate-400">Mock OTP verification</p>
         </div>
       </div>
 
       {/* Fare summary */}
-      <div className="rounded-2xl bg-[#1F2740] p-5 mb-6">
+      <div className="rounded-2xl bg-[#080808] border border-[#E8A33D]/60 shadow-[0_0_12px_rgba(232,163,61,0.25)] p-5 mb-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-[#B9BDD1]">Amount to pay</p>
-            <p className="font-mono text-3xl font-bold text-[#F3EDE0] mt-1">
+            <p className="text-xs font-mono text-slate-400">Amount to pay</p>
+            <p className="font-mono text-3xl font-extrabold text-[#E8A33D] mt-1 drop-shadow-[0_0_8px_rgba(232,163,61,0.5)]">
               ₹{selectedOption?.fare.toLocaleString("en-IN") ?? "—"}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-[#B9BDD1]">Route</p>
-            <p className="text-sm font-semibold text-[#F3EDE0] mt-1 max-w-[140px] text-right leading-tight">
+            <p className="text-xs font-mono text-slate-400">Route</p>
+            <p className="text-sm font-semibold text-white mt-1 max-w-[140px] text-right leading-tight">
               {selectedOption?.route ?? "—"}
             </p>
           </div>
@@ -94,27 +102,49 @@ export default function PaymentPage() {
       </div>
 
       {/* OTP */}
-      <div className="rounded-2xl bg-[#1F2740] p-6">
-        <label className="text-xs font-bold tracking-[0.12em] text-[#B9BDD1]/70">PAYMENT OTP</label>
-        <p className="mt-1 text-xs text-[#B9BDD1] mb-4">Enter any 4-digit code to simulate payment</p>
+      <div className="rounded-2xl bg-[#080808] border border-[#E8A33D]/70 shadow-[0_0_14px_rgba(232,163,61,0.3)] p-6">
+        <label className="text-xs font-mono font-bold tracking-[0.12em] text-[#E8A33D]">
+          PAYMENT OTP
+        </label>
+        <p className="mt-1 text-xs text-slate-400 mb-4">
+          Enter any 4-digit code to simulate payment
+        </p>
         <div className="flex justify-center gap-3">
           {otpDigits.map((digit, idx) => (
-            <input key={idx} ref={otpRefs[idx]} type="text" inputMode="numeric"
-              value={digit} onChange={(e) => handleOtpChange(idx, e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Backspace" && !digit && idx > 0) otpRefs[idx - 1]?.current?.focus(); }}
+            <input
+              key={idx}
+              ref={otpRefs[idx]}
+              type="text"
+              inputMode="numeric"
+              value={digit}
+              onChange={(e) => handleOtpChange(idx, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Backspace" && !digit && idx > 0)
+                  otpRefs[idx - 1]?.current?.focus();
+              }}
               maxLength={1}
-              className="w-14 h-14 shrink-0 rounded-xl border border-white/10 bg-[#151B2E] text-center font-mono text-2xl font-bold text-[#F3EDE0] focus:border-[#3F8F5F] focus:outline-none" />
+              className="w-14 h-14 shrink-0 rounded-xl border border-white/10 bg-black text-center font-mono text-2xl font-bold text-white focus:border-[#E8A33D] focus:shadow-[0_0_10px_rgba(232,163,61,0.4)] focus:outline-none"
+            />
           ))}
         </div>
-        {error && <p className="mt-2 text-xs text-[#C0432E]">{error}</p>}
-        <button onClick={handleVerify} disabled={loading || otpDigits.some((d) => !d)}
-          className="mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[#3F8F5F] py-3.5 text-sm font-bold text-white transition hover:bg-[#4ca870] disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</> : "Verify & Book"}
+        {error && <p className="mt-2 text-xs font-mono text-[#C0432E]">{error}</p>}
+        <button
+          onClick={handleVerify}
+          disabled={loading || otpDigits.some((d) => !d)}
+          className="mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[#E8A33D] py-3.5 text-sm font-extrabold text-black shadow-[0_0_18px_rgba(232,163,61,0.5)] transition hover:bg-[#F0B250] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-black" /> Processing...
+            </>
+          ) : (
+            "Verify & Book"
+          )}
         </button>
       </div>
 
-      <p className="mt-6 text-center text-[11px] text-[#B9BDD1]/40">
-        This is a simulated payment. No real money is deducted.
+      <p className="mt-6 text-center text-[11px] font-mono text-slate-600">
+        Simulated payment for hackathon demonstration. No real money deducted.
       </p>
     </motion.main>
   );

@@ -1,30 +1,55 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Devanagari:wght@400;500;600;700&display=swap");
 
 :root {
-  --bg: #151B2E;
-  --panel: #1F2740;
-  --panel-2: #2A3454;
-  --paper: #F7EFE0;
-  --paper-2: #EDE3CE;
+  --bg: #000000;
+  --panel: #080808;
+  --panel-2: #121212;
+  --paper: #0A0A0A;
+  --paper-2: #141414;
   --marigold: #E8A33D;
   --marigold-2: #C48630;
   --vermilion: #C0432E;
   --signal-green: #3F8F5F;
-  --text-primary: #F3EDE0;
-  --text-muted: #B9BDD1;
-  --text-dark: #1C2B4A;
-  --text-dark-2: #5B5342;
+  --text-primary: #FFFFFF;
+  --text-secondary: #E2E8F0;
+  --text-muted: #94A3B8;
+  --text-dark: #FFFFFF;
+  --text-dark-2: #CBD5E1;
 }
 
-* { -webkit-tap-highlight-color: transparent; }
-html { background: #151B2E; }
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html {
+  background: #000000;
+  color-scheme: dark;
+}
+
 body {
   font-family: "IBM Plex Sans", "IBM Plex Sans Devanagari", system-ui, sans-serif;
-  background: #151B2E;
-  color: #F3EDE0;
+  background: #000000;
+  color: #FFFFFF;
   -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+}
+
+/* OLED Luxury Amber Glow helpers */
+.neon-amber-box {
+  border: 1px solid rgba(232, 163, 61, 0.85);
+  box-shadow: 0 0 12px rgba(232, 163, 61, 0.35), inset 0 0 8px rgba(232, 163, 61, 0.12);
+}
+
+.neon-amber-box:hover {
+  box-shadow: 0 0 18px rgba(232, 163, 61, 0.6), inset 0 0 12px rgba(232, 163, 61, 0.2);
+}
+
+.neon-glow-text {
+  text-shadow: 0 0 10px rgba(232, 163, 61, 0.5);
 }
