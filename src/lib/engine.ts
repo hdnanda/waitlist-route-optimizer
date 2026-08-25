@@ -268,3 +268,4 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
     options,
   };
 }
+

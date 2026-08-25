@@ -1,4 +1,4 @@
-// ── Shared types for the Waitlist Route Optimizer ──────────────────────────
+﻿// â”€â”€ Shared types for the Waitlist Route Optimizer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type TrainClass = "1A" | "2A" | "3A" | "SL" | "CC";
 export type BookingStatus = "CONFIRMED" | "WL" | "RAC";
@@ -53,6 +53,7 @@ export interface RouteClassData {
 }
 
 export interface RouteData {
+  generated?: boolean;
   originCode: string;
   originName: string;
   destinationCode: string;
@@ -61,7 +62,7 @@ export interface RouteData {
   classes: RouteClassData[];
 }
 
-// ── Engine output ───────────────────────────────────────────────────────────
+// â”€â”€ Engine output â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ReasonedOption {
   id: string;
@@ -96,7 +97,7 @@ export interface RouteResult {
   directWL?: number;
 }
 
-// ── Auth / Accounts ─────────────────────────────────────────────────────────
+// â”€â”€ Auth / Accounts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface StoredTicket {
   pnr: string;
@@ -119,3 +120,4 @@ export interface Account {
   name: string;
   tickets: StoredTicket[];
 }
+

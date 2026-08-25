@@ -27,59 +27,7 @@ export function setCachedIntent(input: string, intent: ParsedIntent): void {
 
 // â”€â”€ Known city names (from original Codex parser, extended) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const INDIAN_LOCATIONS = [
-  "andhra pradesh", "arunachal pradesh", "assam", "bihar", "chhattisgarh", "goa", "gujarat", "haryana",
-  "himachal pradesh", "jharkhand", "karnataka", "kerala", "madhya pradesh", "maharashtra", "manipur",
-  "meghalaya", "mizoram", "nagaland", "odisha", "punjab", "rajasthan", "sikkim", "tamil nadu", "telangana",
-  "tripura", "uttar pradesh", "uttarakhand", "west bengal", "kashmir", "jammu", "delhi", "chandigarh",
-  "mumbai", "bengaluru", "hyderabad", "ahmedabad", "chennai", "kolkata", "surat", "pune",
-  "jaipur", "lucknow", "kanpur", "nagpur", "indore", "thane", "bhopal", "visakhapatnam", "patna",
-  "vadodara", "ghaziabad", "ludhiana", "agra", "nashik", "faridabad", "meerut", "rajkot",
-  "varanasi", "srinagar", "aurangabad", "dhanbad", "amritsar", "allahabad", "prayagraj", "howrah",
-  "ranchi", "gwalior", "jabalpur", "coimbatore", "vijayawada", "jodhpur", "madurai", "raipur",
-  "kota", "guwahati", "solapur", "hubli", "mysore", "gurgaon", "noida", "jalandhar",
-  "bhubaneswar", "salem", "warangal", "guntur", "bhiwandi", "saharanpur", "gorakhpur", "bikaner",
-  "amravati", "jamshedpur", "bhilai", "cuttack", "kochi", "bhavnagar", "dehradun", "durgapur",
-  "asansol", "nanded", "kolhapur", "ajmer", "gulbarga", "jamnagar", "ujjain", "siliguri", "jhansi",
-  "mangalore", "belgaum", "gaya", "udaipur", "kozhikode", "kurnool", "rajahmundry",
-  "bokaro", "bellary", "patiala", "agartala", "bhagalpur", "latur", "dhule", "rohtak", "korba",
-  "bhilwara", "berhampur", "muzaffarpur", "ahmednagar", "mathura", "kollam", "kadapa", "bilaspur",
-  "shahjahanpur", "satara", "bijapur", "rampur", "shimoga", "chandrapur", "junagadh", "thrissur",
-  "alwar", "bardhaman", "kakinada", "nizamabad", "tumkur", "khammam", "darbhanga", "aizawl",
-  "dewas", "karnal", "bathinda", "jalna", "eluru", "barasat", "purnia", "satna", "mau", "sonipat",
-  "farrukhabad", "sagar", "durg", "imphal", "ratlam", "hapur", "arrah", "karimnagar", "anantapur",
-  "etawah", "bharatpur", "begusarai", "gandhidham", "sikar", "thoothukudi", "rewa", "mirzapur",
-  "raichur", "pali", "haridwar", "katihar", "nagercoil", "thanjavur", "bulandshahr", "secunderabad",
-  "bidar", "munger", "panchkula", "burhanpur", "kharagpur", "dindigul", "gandhinagar", "hospet",
-  "malda", "ongole", "deoghar", "chapra", "haldia", "khandwa", "nandyal", "chittoor", "morena",
-  "amroha", "anand", "bhind", "bhiwani", "baharampur", "ambala", "morvi", "fatehpur", "rae bareli",
-  "bhusawal", "orai", "bahraich", "vellore", "mahesana", "raiganj", "sirsa", "danapur", "serampore",
-  "guna", "jaunpur", "panvel", "shivpuri", "unnao", "alappuzha", "kottayam", "machilipatnam",
-  "shimla", "adoni", "udupi", "katihar", "saharsa", "dibrugarh", "jorhat", "hazaribagh", "hindupur",
-  "nagaon", "sasaram", "hajipur",
-  "ndls", "csmt", "bct", "pnbe", "bsb", "sbc", "lko", "mas", "hwh", "adi", "gkp", "bombay", "calcutta",
-  "madras", "banaras", "kashi", "bangalore"
-];
-
-const CITY_ALIASES: Record<string, string> = {
-  delhi: "Delhi", "new delhi": "Delhi", dilli: "Delhi", ndls: "Delhi",
-  "nai delhi": "Delhi", "old delhi": "Delhi",
-  mumbai: "Mumbai", bombay: "Mumbai", csmt: "Mumbai", bct: "Mumbai", dadar: "Mumbai",
-  patna: "Patna", pnbe: "Patna", "patna jn": "Patna",
-  varanasi: "Varanasi", banaras: "Varanasi", kashi: "Varanasi",
-  bengaluru: "Bengaluru", bangalore: "Bengaluru", sbc: "Bengaluru",
-  banglore: "Bengaluru", bengalore: "Bengaluru",
-  lucknow: "Lucknow", lko: "Lucknow", lucknau: "Lucknow",
-  chennai: "Chennai", madras: "Chennai", mas: "Chennai",
-  kolkata: "Kolkata", calcutta: "Kolkata", howrah: "Kolkata", hwh: "Kolkata",
-  ahmedabad: "Ahmedabad", amdavad: "Ahmedabad", adi: "Ahmedabad", ahmadabad: "Ahmedabad",
-  gorakhpur: "Gorakhpur", gkp: "Gorakhpur",
-  goa: "Goa", panaji: "Goa",
-  pune: "Pune", hyderabad: "Hyderabad", secunderabad: "Hyderabad",
-  jaipur: "Jaipur", agra: "Agra", kanpur: "Kanpur", nagpur: "Nagpur",
-  bhopal: "Bhopal", indore: "Indore", surat: "Surat",
-  amritsar: "Amritsar", chandigarh: "Chandigarh",
-};
+import { CITIES } from "./cities";
 
 // Class aliases â€” sorted longest-first so "sleeper class" matches before "sleeper"
 const CLASS_ALIASES: [string, TrainClass][] = [
@@ -97,11 +45,17 @@ const DATE_PATTERNS: Array<[RegExp, string]> = [
 
 function matchCity(text: string): string | null {
   const lower = text.toLowerCase().trim();
-  if (CITY_ALIASES[lower]) return CITY_ALIASES[lower];
-  for (const [alias, city] of Object.entries(CITY_ALIASES)) {
-    if (lower.includes(alias)) return city;
+  const city = CITIES.find(
+    c => c.name.toLowerCase() === lower || c.aliases.some(a => a.toLowerCase() === lower)
+  );
+  if (city) return city.name;
+  
+  for (const c of CITIES) {
+    if (lower.includes(c.name.toLowerCase())) return c.name;
+    for (const a of c.aliases) {
+      if (lower.includes(a.toLowerCase())) return c.name;
+    }
   }
-  if (lower.length > 2) return lower.charAt(0).toUpperCase() + lower.slice(1);
   return null;
 }
 
