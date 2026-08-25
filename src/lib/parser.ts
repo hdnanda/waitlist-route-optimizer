@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Client-side parser utilities.
  *
  * Attribution: The deterministicFallback below is derived from the original
- * Codex/OpenAI-built parser in App.jsx — specifically the extractRouteIntent()
+ * Codex/OpenAI-built parser in App.jsx â€” specifically the extractRouteIntent()
  * regex and city-matching logic, preserved verbatim. The core regex pattern
  * is unchanged from the Codex build; only a pre-processing step is added to
  * strip class codes (3A, 2A, etc.) before the regex runs, which was the
@@ -14,7 +14,7 @@
 
 import type { ParsedIntent, TrainClass } from "./types";
 
-// ── In-memory demo cache (keyed by exact input string) ────────────────────
+// â”€â”€ In-memory demo cache (keyed by exact input string) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const intentCache = new Map<string, ParsedIntent>();
 
 export function getCachedIntent(input: string): ParsedIntent | null {
@@ -25,7 +25,7 @@ export function setCachedIntent(input: string, intent: ParsedIntent): void {
   intentCache.set(input, { ...intent, fromCache: false });
 }
 
-// ── Known city names (from original Codex parser, extended) ──────────────
+// â”€â”€ Known city names (from original Codex parser, extended) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CITY_ALIASES: Record<string, string> = {
   delhi: "Delhi", "new delhi": "Delhi", dilli: "Delhi", ndls: "Delhi",
   "nai delhi": "Delhi", "old delhi": "Delhi",
@@ -46,7 +46,7 @@ const CITY_ALIASES: Record<string, string> = {
   amritsar: "Amritsar", chandigarh: "Chandigarh",
 };
 
-// Class aliases — sorted longest-first so "sleeper class" matches before "sleeper"
+// Class aliases â€” sorted longest-first so "sleeper class" matches before "sleeper"
 const CLASS_ALIASES: [string, TrainClass][] = [
   ["sleeper class", "SL"], ["first class", "1A"], ["second ac", "2A"], ["third ac", "3A"],
   ["ac first", "1A"], ["ac 2", "2A"], ["ac 3", "3A"], ["2 tier", "2A"], ["3 tier", "3A"],
@@ -74,7 +74,7 @@ function matchCity(text: string): string | null {
  * Strip class codes and "class" keyword from input before running the city
  * regex. This is the fix for the integration bug: the original Codex regex
  * uses [A-Za-z\s]+ which stops at digits, so "Kolkata to Delhi 3A" would
- * fail to match. Pre-stripping "3A" → "Kolkata to Delhi" → regex matches.
+ * fail to match. Pre-stripping "3A" â†’ "Kolkata to Delhi" â†’ regex matches.
  */
 function stripClassFromText(text: string): { trainClass: TrainClass | null; cleaned: string } {
   let trainClass: TrainClass | null = null;
@@ -94,7 +94,7 @@ function stripClassFromText(text: string): { trainClass: TrainClass | null; clea
 }
 
 /**
- * deterministicFallback — the original Codex extractRouteIntent() regex,
+ * deterministicFallback â€” the original Codex extractRouteIntent() regex,
  * preserved verbatim from App.jsx, now with a pre-processing step that strips
  * class codes so digits don't break the [A-Za-z\s]+ character class match.
  *
@@ -104,10 +104,10 @@ function stripClassFromText(text: string): { trainClass: TrainClass | null; clea
 export function deterministicFallback(userInput: string): ParsedIntent | null {
   const text = userInput.trim();
 
-  // ── Step 1: Strip class codes before city regex (integration fix) ─────────
+  // â”€â”€ Step 1: Strip class codes before city regex (integration fix) â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { trainClass, cleaned } = stripClassFromText(text);
 
-  // ── Step 2: Original Codex regex — verbatim from App.jsx ─────────────────
+  // â”€â”€ Step 2: Original Codex regex â€” verbatim from App.jsx â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const match = cleaned.match(
     /(?:from\s+)?([A-Za-z\u0900-\u097F\s]+?)\s+(?:to|se|towards|tak)\s+([A-Za-z\u0900-\u097F\s]+?)(?:\s+(?:on|next|for|ko|during|ke\s+liye)\s+|$)/i
   );
@@ -128,7 +128,32 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
     destination = matchCity(rawDest);
   }
 
-  // ── Step 3: Date extraction ───────────────────────────────────────────────
+  // ── Step 2.5: Safe City Extraction (if regex failed or grabbed garbage) ──
+  // If the regex grabbed something like "I want" instead of the city, 
+  // we can just scan the text directly for known cities as a backup.
+  if (!origin || !destination) {
+    const words = cleaned.toLowerCase().split(/[\s,]+/);
+    const foundCities: string[] = [];
+    
+    // Check aliases
+    for (const [alias, city] of Object.entries(CITY_ALIASES)) {
+      if (cleaned.toLowerCase().includes(alias)) {
+        if (!foundCities.includes(city)) foundCities.push(city);
+      }
+    }
+
+    if (foundCities.length >= 2 && !origin && !destination) {
+      // If we found exactly two cities, assume first is origin, second is dest
+      // (Unless 'to' or 'se' dictates otherwise, but this is a rough fallback)
+      origin = foundCities[0];
+      destination = foundCities[1];
+    } else if (foundCities.length >= 1) {
+      if (!origin && foundCities[0] !== destination) origin = foundCities[0];
+      else if (!destination && foundCities[0] !== origin) destination = foundCities[0];
+    }
+  }
+
+  // â”€â”€ Step 3: Date extraction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let date: string | null = null;
   for (const [pattern, template] of DATE_PATTERNS) {
     const m = text.match(pattern);
@@ -151,7 +176,7 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
 }
 
 /**
- * parseIntent — primary entry point.
+ * parseIntent â€” primary entry point.
  * 1. Check in-memory demo cache.
  * 2. Call /api/parse (which skips OpenAI immediately if no key is set, so no 6s wait).
  * 3. On API failure: deterministicFallback (client-side safety net).
@@ -160,14 +185,14 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
 export async function parseIntent(userInput: string): Promise<ParsedIntent> {
   const trimmed = userInput.trim();
 
-  // ── Cache check ───────────────────────────────────────────────────────────
+  // â”€â”€ Cache check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const cached = getCachedIntent(trimmed);
   if (cached) {
     console.log("[Parser] Cache hit:", trimmed);
     return { ...cached, fromCache: true };
   }
 
-  // ── API call (fast — server skips OpenAI if no key) ───────────────────────
+  // â”€â”€ API call (fast â€” server skips OpenAI if no key) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const tryApiCall = async (): Promise<ParsedIntent | null> => {
     try {
       const controller = new AbortController();
@@ -194,8 +219,8 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
     return result;
   }
 
-  // ── Client-side deterministic fallback (safety net if API unreachable) ────
-  console.warn("[Parser] API unavailable — using client-side fallback.");
+  // â”€â”€ Client-side deterministic fallback (safety net if API unreachable) â”€â”€â”€â”€
+  console.warn("[Parser] API unavailable â€” using client-side fallback.");
   const fallback = deterministicFallback(trimmed);
   if (fallback) {
     setCachedIntent(trimmed, fallback);
