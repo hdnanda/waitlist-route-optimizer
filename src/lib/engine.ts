@@ -43,10 +43,17 @@ function buildWhy(opt: DatasetOption, originName: string, destinationName: strin
     return `Great news — the direct ${opt.trainName} from ${originName} to ${destinationName} has confirmed seats available in this class. No optimization needed.`;
   if (opt.type === "DIRECT" && opt.status === "WL")
     return `WL ${opt.waitlistNumber} on the ${opt.trainName}. Historical charting data shows less than 20% of WL 40+ positions clear during peak season. Keeping on hold is a fallback only.`;
-  if (opt.type === "SPLIT")
-    return opt.splitLayoverMinutes === 0
-      ? `Same physical train, same berth, no de-boarding required. Two tickets are issued using the intermediate-station quota at ${opt.splitStation}, which is separate from the end-to-end pool — and currently open. Layover: 0 min (continuous journey).`
-      : `The train stops at ${opt.splitStation} for ${opt.splitLayoverMinutes} min. Booking two tickets using the intermediate-station quota, which is currently available. Both legs are confirmed.`;
+  if (opt.type === "SPLIT") {
+    const isSameTrain = opt.leg1 && opt.leg2 && opt.leg1.trainNumber === opt.leg2.trainNumber;
+    if (isSameTrain) {
+      return opt.splitLayoverMinutes === 0
+        ? `Same physical train, same berth, no de-boarding required. Two tickets are issued using the intermediate-station quota at ${opt.splitStation}, which is separate from the end-to-end pool — and currently open. Layover: 0 min (continuous journey).`
+        : `Same physical train stops at ${opt.splitStation} for ${opt.splitLayoverMinutes} min. Booking two tickets using the intermediate-station quota. Both legs confirmed without changing trains.`;
+    } else {
+      const layoverHours = opt.splitLayoverMinutes ? `${Math.floor(opt.splitLayoverMinutes / 60)}h ${opt.splitLayoverMinutes % 60 ? `${opt.splitLayoverMinutes % 60}m` : ''}`.trim() : 'a short';
+      return `Two connecting trains with a ${layoverHours} transfer layover at ${opt.splitStation}. Leg 1: ${opt.leg1?.trainName ?? 'Train 1'} (${opt.leg1?.trainNumber ?? ''}), Leg 2: ${opt.leg2?.trainName ?? 'Train 2'} (${opt.leg2?.trainNumber ?? ''}). Both legs confirmed. Platform change / de-boarding required at ${opt.splitStation}.`;
+    }
+  }
   if (opt.type === "NEARBY")
     return `A fully separate, less-booked train to ${opt.nearbyStation ?? "a nearby station"} (${opt.nearbyDistanceKm}km from ${destinationName}). Confirmed seat available now — trade-off is a short transfer at the destination.`;
   return "";

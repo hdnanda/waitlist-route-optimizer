@@ -5,6 +5,26 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Bell, BellOff, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { useApp } from "@/lib/context";
 
+function calculateLayover(arr: string, dep: string): string | null {
+  const parseMins = (t: string) => {
+    const clean = t.replace(/\+\d+$/, "").trim();
+    const [h, m] = clean.split(":").map(Number);
+    return isNaN(h) || isNaN(m) ? null : h * 60 + m;
+  };
+  const mArr = parseMins(arr);
+  const mDep = parseMins(dep);
+  if (mArr !== null && mDep !== null) {
+    let diff = mDep - mArr;
+    if (diff < 0) diff += 24 * 60;
+    const hours = Math.floor(diff / 60);
+    const mins = diff % 60;
+    if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h`;
+    return `${mins}m`;
+  }
+  return null;
+}
+
 export default function JourneyPage() {
   const router = useRouter();
   const { state } = useApp();
@@ -21,12 +41,31 @@ export default function JourneyPage() {
   }
 
   const isSplit = currentBooking.isSplit;
-  const layoverWarn = isSplit && currentBooking.route.includes("Kalyan");
+  const isTwoDifferentTrains = Boolean(
+    isSplit &&
+    currentBooking.leg1 &&
+    currentBooking.leg2 &&
+    currentBooking.leg1.trainNumber !== currentBooking.leg2.trainNumber
+  );
+
+  const transferStation = currentBooking.leg1?.to ?? "Intermediate Junction";
+  const layoverDuration = (currentBooking.leg1 && currentBooking.leg2)
+    ? calculateLayover(currentBooking.leg1.arrival, currentBooking.leg2.departure)
+    : null;
 
   const timelineSteps = [
     { label: "Booked", sublabel: `PNR: ${currentBooking.pnr}`, status: "done", icon: CheckCircle2 },
     { label: "Chart Preparation", sublabel: "Approx 4 hrs before departure", status: "pending", icon: Clock },
-    { label: "Final Status", sublabel: isSplit ? "Both legs monitored independently" : "Direct booking", status: "pending", icon: CheckCircle2 },
+    {
+      label: "Final Status",
+      sublabel: isTwoDifferentTrains
+        ? `2 connecting trains monitored independently (${transferStation})`
+        : isSplit
+        ? "Both legs monitored independently"
+        : "Direct booking",
+      status: "pending",
+      icon: CheckCircle2,
+    },
   ];
 
   return (
@@ -51,14 +90,18 @@ export default function JourneyPage() {
       <h1 className="mt-2 font-serif text-2xl font-bold leading-tight text-white">{currentBooking.route}</h1>
       <p className="mt-1 text-sm font-mono text-slate-400">{currentBooking.date} · {currentBooking.class}</p>
 
-      {/* Short layover warning */}
-      {layoverWarn && (
+      {/* Transfer Connection Warning / Info Banner */}
+      {isTwoDifferentTrains && currentBooking.leg1 && currentBooking.leg2 && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
           className="mt-4 flex items-start gap-3 rounded-xl bg-[#E8A33D]/10 border border-[#E8A33D]/60 p-4 shadow-[0_0_12px_rgba(232,163,61,0.25)]">
           <AlertTriangle className="h-5 w-5 text-[#E8A33D] shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-bold text-[#E8A33D]">Short layover connection</p>
-            <p className="text-xs text-slate-300 mt-1">52-minute connection — recommended to keep hand luggage handy for a smooth platform transfer.</p>
+            <p className="text-sm font-bold text-[#E8A33D]">
+              Connecting Transfer at {transferStation} {layoverDuration ? `(${layoverDuration} layover)` : ""}
+            </p>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+              De-boarding &amp; platform change required. Arrive <strong className="text-white">{currentBooking.leg1.arrival}</strong> on {currentBooking.leg1.trainName}, board <strong className="text-white">{currentBooking.leg2.departure}</strong> on {currentBooking.leg2.trainName}.
+            </p>
           </div>
         </motion.div>
       )}
@@ -120,11 +163,13 @@ export default function JourneyPage() {
                 </div>
               </div>
             ))}
-            {/* Layover */}
-            <div className="border-t border-white/10 bg-[#0E0E0E] px-4 py-2.5 flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-[#E8A33D]" />
-              <span className="text-xs font-mono text-slate-400">
-                {layoverWarn ? "52 min layover at Kalyan Jn" : "Continuous journey — no de-boarding required"}
+            {/* Layover / Transfer Status Bar */}
+            <div className="border-t border-white/10 bg-[#0E0E0E] px-4 py-3 flex items-center gap-2.5">
+              <Clock className="h-4 w-4 text-[#E8A33D] shrink-0" />
+              <span className="text-xs font-mono text-slate-300">
+                {isTwoDifferentTrains
+                  ? `${layoverDuration ? `${layoverDuration} transfer layover` : "Transfer"} at ${transferStation} — de-boarding & platform change required`
+                  : "Continuous journey — same train, same berth, no de-boarding required"}
               </span>
             </div>
           </div>
