@@ -68,10 +68,7 @@ export default function HomePage() {
 
   return (
     <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative flex min-h-screen flex-col px-5 pb-8 pt-8">
-      <span className="w-fit rounded-full border border-[#E8A33D]/35 bg-[#E8A33D]/10 px-3 py-1 font-mono text-[10px] font-bold tracking-wide text-[#E8A33D]">
-        • PROTOTYPE · MOCK DATA
-      </span>
-      <header className="mt-6">
+      <header className="mt-2">
         <div className="flex items-center gap-2 text-[#E8A33D]">
           <TrainFront className="h-5 w-5" />
           <span className="font-mono text-[11px] tracking-wider">INDIAN RAIL ROUTES</span>
