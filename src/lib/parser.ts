@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Client-side parser utilities.
  *
  * Attribution: The deterministicFallback below is derived from the original
@@ -26,6 +26,41 @@ export function setCachedIntent(input: string, intent: ParsedIntent): void {
 }
 
 // â”€â”€ Known city names (from original Codex parser, extended) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+const INDIAN_LOCATIONS = [
+  "andhra pradesh", "arunachal pradesh", "assam", "bihar", "chhattisgarh", "goa", "gujarat", "haryana",
+  "himachal pradesh", "jharkhand", "karnataka", "kerala", "madhya pradesh", "maharashtra", "manipur",
+  "meghalaya", "mizoram", "nagaland", "odisha", "punjab", "rajasthan", "sikkim", "tamil nadu", "telangana",
+  "tripura", "uttar pradesh", "uttarakhand", "west bengal", "kashmir", "jammu", "delhi", "chandigarh",
+  "mumbai", "bengaluru", "hyderabad", "ahmedabad", "chennai", "kolkata", "surat", "pune",
+  "jaipur", "lucknow", "kanpur", "nagpur", "indore", "thane", "bhopal", "visakhapatnam", "patna",
+  "vadodara", "ghaziabad", "ludhiana", "agra", "nashik", "faridabad", "meerut", "rajkot",
+  "varanasi", "srinagar", "aurangabad", "dhanbad", "amritsar", "allahabad", "prayagraj", "howrah",
+  "ranchi", "gwalior", "jabalpur", "coimbatore", "vijayawada", "jodhpur", "madurai", "raipur",
+  "kota", "guwahati", "solapur", "hubli", "mysore", "gurgaon", "noida", "jalandhar",
+  "bhubaneswar", "salem", "warangal", "guntur", "bhiwandi", "saharanpur", "gorakhpur", "bikaner",
+  "amravati", "jamshedpur", "bhilai", "cuttack", "kochi", "bhavnagar", "dehradun", "durgapur",
+  "asansol", "nanded", "kolhapur", "ajmer", "gulbarga", "jamnagar", "ujjain", "siliguri", "jhansi",
+  "mangalore", "belgaum", "gaya", "udaipur", "kozhikode", "kurnool", "rajahmundry",
+  "bokaro", "bellary", "patiala", "agartala", "bhagalpur", "latur", "dhule", "rohtak", "korba",
+  "bhilwara", "berhampur", "muzaffarpur", "ahmednagar", "mathura", "kollam", "kadapa", "bilaspur",
+  "shahjahanpur", "satara", "bijapur", "rampur", "shimoga", "chandrapur", "junagadh", "thrissur",
+  "alwar", "bardhaman", "kakinada", "nizamabad", "tumkur", "khammam", "darbhanga", "aizawl",
+  "dewas", "karnal", "bathinda", "jalna", "eluru", "barasat", "purnia", "satna", "mau", "sonipat",
+  "farrukhabad", "sagar", "durg", "imphal", "ratlam", "hapur", "arrah", "karimnagar", "anantapur",
+  "etawah", "bharatpur", "begusarai", "gandhidham", "sikar", "thoothukudi", "rewa", "mirzapur",
+  "raichur", "pali", "haridwar", "katihar", "nagercoil", "thanjavur", "bulandshahr", "secunderabad",
+  "bidar", "munger", "panchkula", "burhanpur", "kharagpur", "dindigul", "gandhinagar", "hospet",
+  "malda", "ongole", "deoghar", "chapra", "haldia", "khandwa", "nandyal", "chittoor", "morena",
+  "amroha", "anand", "bhind", "bhiwani", "baharampur", "ambala", "morvi", "fatehpur", "rae bareli",
+  "bhusawal", "orai", "bahraich", "vellore", "mahesana", "raiganj", "sirsa", "danapur", "serampore",
+  "guna", "jaunpur", "panvel", "shivpuri", "unnao", "alappuzha", "kottayam", "machilipatnam",
+  "shimla", "adoni", "udupi", "katihar", "saharsa", "dibrugarh", "jorhat", "hazaribagh", "hindupur",
+  "nagaon", "sasaram", "hajipur",
+  "ndls", "csmt", "bct", "pnbe", "bsb", "sbc", "lko", "mas", "hwh", "adi", "gkp", "bombay", "calcutta",
+  "madras", "banaras", "kashi", "bangalore"
+];
+
 const CITY_ALIASES: Record<string, string> = {
   delhi: "Delhi", "new delhi": "Delhi", dilli: "Delhi", ndls: "Delhi",
   "nai delhi": "Delhi", "old delhi": "Delhi",
@@ -132,32 +167,41 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
     destination = matchCity(rawDest);
   }
 
-  // ── Step 2.5: Safe City Extraction (if regex failed or grabbed garbage) ──
-  // If the regex grabbed something like "I want" instead of the city, 
-  // we can just scan the text directly for known cities as a backup.
-  if (!origin || !destination) {
-    const words = cleaned.toLowerCase().split(/[\s,]+/);
-    const foundCities: string[] = [];
-    
-    // Check aliases
-    for (const [alias, city] of Object.entries(CITY_ALIASES)) {
-      if (cleaned.toLowerCase().includes(alias)) {
-        if (!foundCities.includes(city)) foundCities.push(city);
-      }
-    }
+  // ── Step 2.5: User-Suggested Gazetteer Fallback (Dictionary Scan) ──
+  // If the Codex regex grabbed conversational filler (like "papa ko bihar"),
+  // it won't cleanly match our master list of cities. We detect this and override it
+  // by scanning the entire text for known Indian locations.
 
-    if (foundCities.length >= 2 && !origin && !destination) {
-      // If we found exactly two cities, assume first is origin, second is dest
-      // (Unless 'to' or 'se' dictates otherwise, but this is a rough fallback)
-      origin = foundCities[0];
-      destination = foundCities[1];
-    } else if (foundCities.length >= 1) {
-      if (!origin && foundCities[0] !== destination) origin = foundCities[0];
-      else if (!destination && foundCities[0] !== origin) destination = foundCities[0];
+  const isCleanLocation = (loc: string | null) => {
+    if (!loc) return false;
+    const l = loc.toLowerCase().trim();
+    return INDIAN_LOCATIONS.includes(l) || Object.values(CITY_ALIASES).some(c => c.toLowerCase() === l) || Object.keys(CITY_ALIASES).includes(l);
+  };
+
+  if (!isCleanLocation(origin) || !isCleanLocation(destination)) {
+    // Regex failed or grabbed garbage. Scan the cleaned text for actual locations!
+    const locationRegex = new RegExp(`\\b(${INDIAN_LOCATIONS.join('|')})\\b`, 'gi');
+    const matches = Array.from(cleaned.matchAll(locationRegex)).map(m => m[1].toLowerCase());
+    
+    // Deduplicate while preserving order found in sentence
+    const uniqueLocations = [...new Set(matches)];
+    
+    if (uniqueLocations.length >= 2) {
+      // First found location is usually origin, second is dest
+      origin = matchCity(uniqueLocations[0]) || uniqueLocations[0];
+      destination = matchCity(uniqueLocations[1]) || uniqueLocations[1];
+    } else if (uniqueLocations.length === 1) {
+      // We found one valid location, keep whatever clean location the regex might have found
+      if (!isCleanLocation(origin)) origin = matchCity(uniqueLocations[0]) || uniqueLocations[0];
+      else if (!isCleanLocation(destination)) destination = matchCity(uniqueLocations[0]) || uniqueLocations[0];
     }
   }
+  
+  // Format the outputs nicely (Capitalize if not in alias map)
+  if (origin && !CITY_ALIASES[origin.toLowerCase()]) origin = origin.charAt(0).toUpperCase() + origin.slice(1);
+  if (destination && !CITY_ALIASES[destination.toLowerCase()]) destination = destination.charAt(0).toUpperCase() + destination.slice(1);
 
-  // â”€â”€ Step 3: Date extraction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 3: Date extraction ──
   let date: string | null = null;
   for (const [pattern, template] of DATE_PATTERNS) {
     const m = text.match(pattern);
