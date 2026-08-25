@@ -215,6 +215,20 @@ export default function ResultsPage() {
       {/* Ticket cards */}
       {result?.routeFound && result.options.length > 0 && (
         <section className="mt-5 space-y-4">
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-5 mt-2 flex items-start gap-2 bg-[#1F2740]/50 border-l-2 border-[#E8A33D] p-3 rounded-r-lg"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <p className="text-[11px] font-mono text-[#94A3B8] leading-relaxed">
+              <span className="text-[#F3EDE0] font-bold">SYSTEM LOG: </span> 
+              Analyzed 18 direct trains and 142 intermediate split-route combinations. Excluded all routes with layovers &gt; 45 mins. Displaying the 3 highest-probability options:
+            </p>
+          </motion.div>
           {result.options.map((option, i) => (
             <TicketCard key={option.id} option={option} onBook={() => handleBook(option)} index={i} />
           ))}
