@@ -1,4 +1,5 @@
-﻿import type { RouteData } from "./types";
+import type { RouteData } from "./types";
+import { generateRoute } from "./routeGenerator";
 
 /**
  * Mock dataset — 6 route pairs, each with 2-3 classes.
@@ -564,22 +565,24 @@ export const ROUTES: RouteData[] = [
   },
 ];
 
-/** Find a route in the dataset by fuzzy city matching */
+/** Find a route in the dataset by fuzzy city matching (curated first, then procedural generator) */
 export function findRoute(origin: string, destination: string): RouteData | null {
   const o = origin.toLowerCase().trim();
   const d = destination.toLowerCase().trim();
 
-  return (
-    ROUTES.find(
-      (r) =>
-        (r.aliases.origin.some((a) => o.includes(a) || a.includes(o)) ||
-          r.originName.toLowerCase().includes(o) ||
-          r.originCode.toLowerCase() === o) &&
-        (r.aliases.destination.some((a) => d.includes(a) || a.includes(d)) ||
-          r.destinationName.toLowerCase().includes(d) ||
-          r.destinationCode.toLowerCase() === d)
-    ) ?? null
+  const curated = ROUTES.find(
+    (r) =>
+      (r.aliases.origin.some((a) => o.includes(a) || a.includes(o)) ||
+        r.originName.toLowerCase().includes(o) ||
+        r.originCode.toLowerCase() === o) &&
+      (r.aliases.destination.some((a) => d.includes(a) || a.includes(d)) ||
+        r.destinationName.toLowerCase().includes(d) ||
+        r.destinationCode.toLowerCase() === d)
   );
+
+  if (curated) return curated;
+
+  return generateRoute(origin, destination);
 }
 
 /** All classes available on a route */
