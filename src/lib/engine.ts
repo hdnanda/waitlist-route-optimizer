@@ -74,7 +74,8 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
   ];
 
   // ── Find route ────────────────────────────────────────────────────────────
-  const route = findRoute(origin, destination);
+  const requestedClass = overrideClass ?? intent.class ?? DEFAULT_CLASS;
+  const route = findRoute(origin, destination, requestedClass);
 
   if (!route) {
     trace.push(

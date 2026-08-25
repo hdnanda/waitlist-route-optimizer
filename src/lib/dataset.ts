@@ -1,4 +1,4 @@
-import type { RouteData } from "./types";
+import type { RouteData, TrainClass } from "./types";
 import { generateRoute } from "./routeGenerator";
 
 /**
@@ -566,7 +566,7 @@ export const ROUTES: RouteData[] = [
 ];
 
 /** Find a route in the dataset by fuzzy city matching (curated first, then procedural generator) */
-export function findRoute(origin: string, destination: string): RouteData | null {
+export function findRoute(origin: string, destination: string, requestedClass?: TrainClass): RouteData | null {
   const o = origin.toLowerCase().trim();
   const d = destination.toLowerCase().trim();
 
@@ -582,7 +582,7 @@ export function findRoute(origin: string, destination: string): RouteData | null
 
   if (curated) return curated;
 
-  return generateRoute(origin, destination);
+  return generateRoute(origin, destination, requestedClass ?? "3A");
 }
 
 /** All classes available on a route */
