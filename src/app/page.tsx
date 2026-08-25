@@ -60,7 +60,7 @@ const EXAMPLE_CHIPS = [
 
 function GlowingSectionDivider({ title }: { title: string }) {
   return (
-    <div className="flex items-center my-6">
+    <div className="flex items-center my-5">
       <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#E8A33D]/40 to-[#E8A33D]/80" />
       <div className="flex items-center gap-1.5 px-3">
         <Sparkles className="h-2.5 w-2.5 text-[#E8A33D] animate-pulse" />
@@ -144,10 +144,10 @@ export default function HomePage() {
     <motion.main
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="relative flex min-h-screen flex-col px-5 pb-12 pt-6 bg-black"
+      className="relative flex min-h-screen flex-col px-5 pb-16 pt-6 bg-black"
     >
       {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <TrainFront className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_8px_rgba(232,163,61,0.6)]" />
           <span className="font-mono text-xs tracking-widest text-[#E8A33D] uppercase font-bold">
@@ -165,52 +165,20 @@ export default function HomePage() {
       </div>
 
       {/* ── Main Title Block ────────────────────────────────────────────────── */}
-      <header className="mt-1">
+      <header className="mt-0.5">
         <h1 className="font-serif text-4xl font-extrabold text-white tracking-tight leading-tight">
           घर वापसी
         </h1>
-        <div className="my-2.5 h-[1px] w-full bg-gradient-to-r from-[#E8A33D]/80 via-[#E8A33D]/30 to-transparent" />
+        <div className="my-2 h-[1px] w-full bg-gradient-to-r from-[#E8A33D]/80 via-[#E8A33D]/30 to-transparent" />
         <p className="text-sm text-slate-200 font-medium">Waitlist Route Optimizer</p>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-0.5 text-xs text-slate-400">
           बुक करें जब टिकट मिले — हम रास्ता निकालते हैं
         </p>
       </header>
 
-      {/* ── Quick Start 2x3 Grid ────────────────────────────────────────────── */}
-      <section className="mt-2">
-        <GlowingSectionDivider title="QUICK START — TAP TO TRY" />
-        <div className="grid grid-cols-2 gap-3.5 my-2">
-          {EXAMPLE_CHIPS.map((chip) => {
-            const Icon = chip.icon;
-            return (
-              <button
-                key={chip.label}
-                type="button"
-                onClick={() => void handleSearch(chip.input)}
-                disabled={loading}
-                className="bg-[#050505] hover:bg-[#0A0A0A] rounded-2xl p-3.5 border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] hover:shadow-[0_0_18px_rgba(232,163,61,0.65),inset_0_0_10px_rgba(232,163,61,0.15)] flex flex-col justify-between cursor-pointer text-left transition-all duration-200 min-h-[96px] active:scale-[0.98]"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <Icon className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_6px_rgba(232,163,61,0.5)]" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#E8A33D]/40" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm text-white leading-tight mt-2">
-                    {chip.label}
-                  </p>
-                  <p className="text-[11px] text-slate-400 font-mono mt-0.5 leading-tight">
-                    {chip.sublabel}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── "Ask Anything" Search Input Area ───────────────────────────────── */}
-      <section className="mt-2">
-        <GlowingSectionDivider title="OR ASK ANYTHING" />
+      {/* ── "Ask Anything" Search Input Area (NOW PLACED ON TOP) ───────────── */}
+      <section className="mt-1">
+        <GlowingSectionDivider title="ASK ANYTHING" />
         <div className="bg-[#050505] rounded-2xl p-4 border border-[#E8A33D]/90 shadow-[0_0_14px_rgba(232,163,61,0.45)] relative flex flex-col justify-between min-h-[120px] transition-all duration-200 hover:shadow-[0_0_20px_rgba(232,163,61,0.65)]">
           <textarea
             value={input}
@@ -245,6 +213,7 @@ export default function HomePage() {
             </button>
           </div>
         </div>
+
         {listening && (
           <p className="mt-2 text-xs text-[#E8A33D] animate-pulse font-mono flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-[#E8A33D] animate-ping" />
@@ -252,30 +221,62 @@ export default function HomePage() {
           </p>
         )}
         {inputError && <p className="mt-2 text-xs text-[#E8A33D] font-mono">{inputError}</p>}
+
+        {/* Search CTA Button */}
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => void handleSearch()}
+            disabled={loading || !input.trim()}
+            className="flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-[#E8A33D] py-3.5 text-sm font-extrabold text-black shadow-[0_0_18px_rgba(232,163,61,0.5)] transition-all hover:bg-[#F0B250] hover:shadow-[0_0_24px_rgba(232,163,61,0.7)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-black" /> Parsing...
+              </>
+            ) : (
+              <>
+                Find confirmed journey <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+              </>
+            )}
+          </button>
+          <p className="mt-2 text-center text-[10px] text-slate-500 font-mono">
+            We look beyond direct waitlists to find the best route.
+          </p>
+        </div>
       </section>
 
-      {/* ── Search CTA Button ──────────────────────────────────────────────── */}
-      <div className="mt-8">
-        <button
-          type="button"
-          onClick={() => void handleSearch()}
-          disabled={loading || !input.trim()}
-          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[#E8A33D] py-4 text-sm font-extrabold text-black shadow-[0_0_20px_rgba(232,163,61,0.55)] transition-all hover:bg-[#F0B250] hover:shadow-[0_0_26px_rgba(232,163,61,0.75)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin text-black" /> Parsing...
-            </>
-          ) : (
-            <>
-              Find confirmed journey <ArrowRight className="h-4 w-4 stroke-[2.5]" />
-            </>
-          )}
-        </button>
-        <p className="mt-3 text-center text-[11px] text-slate-500 font-mono">
-          We look beyond direct waitlists to find the best route.
-        </p>
-      </div>
+      {/* ── Quick Start 2x3 Grid (NOW BELOW SEARCH) ────────────────────────── */}
+      <section className="mt-2">
+        <GlowingSectionDivider title="QUICK START — TAP TO TRY" />
+        <div className="grid grid-cols-2 gap-3 my-1">
+          {EXAMPLE_CHIPS.map((chip) => {
+            const Icon = chip.icon;
+            return (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => void handleSearch(chip.input)}
+                disabled={loading}
+                className="bg-[#050505] hover:bg-[#0A0A0A] rounded-2xl p-3.5 border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] hover:shadow-[0_0_18px_rgba(232,163,61,0.65),inset_0_0_10px_rgba(232,163,61,0.15)] flex flex-col justify-between cursor-pointer text-left transition-all duration-200 min-h-[92px] active:scale-[0.98]"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <Icon className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_6px_rgba(232,163,61,0.5)]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#E8A33D]/40" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-white leading-tight mt-1.5">
+                    {chip.label}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5 leading-tight">
+                    {chip.sublabel}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* ── Loading Overlay ─────────────────────────────────────────────────── */}
       <AnimatePresence>
