@@ -1,12 +1,22 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppProvider } from "@/lib/context";
 import BottomNav from "@/components/BottomNav";
 
 export const metadata: Metadata = {
   title: "घर वापसी — Waitlist Route Optimizer",
-  description: "OLED Luxury IRCTC redesign. Find confirmed alternatives when direct trains are waitlisted.",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  description: "Stuck on a train waitlist? We look beyond the direct queue to discover confirmed split-ticket quotas and alternate station connections.",
+  openGraph: {
+    title: "घर वापसी — Waitlist Route Optimizer",
+    description: "Stuck on a train waitlist? We look beyond the direct queue to discover confirmed split-ticket quotas and alternate station connections.",
+    type: "website",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
