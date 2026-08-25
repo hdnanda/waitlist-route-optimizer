@@ -97,13 +97,13 @@ export default function PaymentPage() {
       <div className="rounded-2xl bg-[#1F2740] p-6">
         <label className="text-xs font-bold tracking-[0.12em] text-[#B9BDD1]/70">PAYMENT OTP</label>
         <p className="mt-1 text-xs text-[#B9BDD1] mb-4">Enter any 4-digit code to simulate payment</p>
-        <div className="flex gap-3">
+        <div className="flex justify-center gap-3">
           {otpDigits.map((digit, idx) => (
             <input key={idx} ref={otpRefs[idx]} type="text" inputMode="numeric"
               value={digit} onChange={(e) => handleOtpChange(idx, e.target.value)}
               onKeyDown={(e) => { if (e.key === "Backspace" && !digit && idx > 0) otpRefs[idx - 1]?.current?.focus(); }}
               maxLength={1}
-              className="flex-1 rounded-xl border border-white/10 bg-[#151B2E] py-4 text-center font-mono text-2xl font-bold text-[#F3EDE0] focus:border-[#3F8F5F] focus:outline-none min-h-[64px]" />
+              className="w-14 h-14 shrink-0 rounded-xl border border-white/10 bg-[#151B2E] text-center font-mono text-2xl font-bold text-[#F3EDE0] focus:border-[#3F8F5F] focus:outline-none" />
           ))}
         </div>
         {error && <p className="mt-2 text-xs text-[#C0432E]">{error}</p>}
