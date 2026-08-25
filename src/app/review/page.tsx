@@ -1,15 +1,13 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Train, ArrowRight } from "lucide-react";
+import { ArrowLeft, Train, ArrowRight, UserCheck } from "lucide-react";
 import { useApp } from "@/lib/context";
 
 export default function ReviewPage() {
   const router = useRouter();
   const { state } = useApp();
   const { selectedOption, parsedIntent, loggedInAccount } = state;
-  const [passengerName, setPassengerName] = useState(loggedInAccount?.name ?? "");
 
   if (!selectedOption || !parsedIntent || !loggedInAccount) {
     return (
@@ -71,10 +69,23 @@ export default function ReviewPage() {
             <span className="font-mono text-xl font-bold text-white">₹{selectedOption.fare.toLocaleString("en-IN")}</span>
           </div>
 
-          <label className="text-xs font-mono font-bold tracking-[0.1em] text-[#E8A33D]">PASSENGER NAME</label>
-          <input type="text" value={passengerName} onChange={(e) => setPassengerName(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white focus:border-[#E8A33D] focus:shadow-[0_0_10px_rgba(232,163,61,0.4)] focus:outline-none min-h-[48px]" />
-          <p className="mt-1.5 text-[10px] font-mono text-slate-500">Logged in as {loggedInAccount.name}</p>
+          <label className="text-xs font-mono font-bold tracking-[0.1em] text-[#E8A33D] uppercase">
+            PRIMARY PASSENGER
+          </label>
+          <div className="mt-2 flex items-center justify-between rounded-xl border border-[#E8A33D]/40 bg-black/80 px-4 py-3.5 shadow-[inset_0_0_8px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center gap-2.5">
+              <UserCheck className="h-4 w-4 text-[#3F8F5F]" />
+              <div>
+                <p className="text-sm font-bold text-white leading-tight">{loggedInAccount.name}</p>
+                <p className="text-[10px] font-mono text-slate-400">
+                  +91 ••••••{loggedInAccount.mobileLast4} {loggedInAccount.age ? `• ${loggedInAccount.age} yrs` : ""}
+                </p>
+              </div>
+            </div>
+            <span className="rounded-full border border-[#3F8F5F]/40 bg-[#3F8F5F]/15 px-2 py-0.5 text-[9px] font-mono font-bold text-[#3F8F5F]">
+              VERIFIED
+            </span>
+          </div>
         </div>
       </div>
 

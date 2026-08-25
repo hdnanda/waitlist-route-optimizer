@@ -126,6 +126,7 @@ export interface StoredTicket {
 export interface Account {
   mobileLast4: string;
   name: string;
+  age?: number;
   tickets: StoredTicket[];
 }
 

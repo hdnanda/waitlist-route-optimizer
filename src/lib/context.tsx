@@ -1,12 +1,13 @@
-﻿"use client";
+"use client";
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
 import type { ParsedIntent, ReasonedOption, TrainClass, Account, StoredTicket } from "./types";
 
-// ── Seeded accounts (Part 4 — Screen 3) ─────────────────────────────────────
-const SEEDED_ACCOUNTS: Account[] = [
+// ── Hardcoded Seeded Accounts ───────────────────────────────────────────────
+export const HARDCODED_ACCOUNTS: Account[] = [
   {
     mobileLast4: "4521",
     name: "Ramesh Kumar",
+    age: 42,
     tickets: [
       {
         pnr: "MOCK-4827193056",
@@ -26,6 +27,7 @@ const SEEDED_ACCOUNTS: Account[] = [
   {
     mobileLast4: "7789",
     name: "Priya Sharma",
+    age: 29,
     tickets: [
       {
         pnr: "MOCK-7731925048",
@@ -42,11 +44,6 @@ const SEEDED_ACCOUNTS: Account[] = [
         leg2: { trainNumber: "12591", trainName: "Gorakhpur Express", from: "Nagpur", to: "Lucknow", departure: "08:45+1", arrival: "18:30+2" },
       } as StoredTicket,
     ],
-  },
-  {
-    mobileLast4: "3300",
-    name: "New User",
-    tickets: [],
   },
 ];
 
@@ -65,6 +62,7 @@ type Action =
   | { type: "SET_OPTION"; payload: ReasonedOption }
   | { type: "SET_CLASS"; payload: TrainClass }
   | { type: "SET_ACCOUNT"; payload: Account }
+  | { type: "REGISTER_ACCOUNT"; payload: Account }
   | { type: "SET_BOOKING"; payload: StoredTicket }
   | { type: "ADD_TICKET"; payload: StoredTicket }
   | { type: "RESET" };
@@ -79,6 +77,13 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, selectedClass: action.payload };
     case "SET_ACCOUNT":
       return { ...state, loggedInAccount: action.payload };
+    case "REGISTER_ACCOUNT": {
+      const exists = state.accounts.some((a) => a.mobileLast4 === action.payload.mobileLast4);
+      const accounts = exists
+        ? state.accounts.map((a) => (a.mobileLast4 === action.payload.mobileLast4 ? action.payload : a))
+        : [...state.accounts, action.payload];
+      return { ...state, loggedInAccount: action.payload, accounts };
+    }
     case "SET_BOOKING":
       return { ...state, currentBooking: action.payload };
     case "ADD_TICKET": {
@@ -104,7 +109,7 @@ function loadAccounts(): Account[] {
     const raw = sessionStorage.getItem("railpravesh_accounts");
     if (raw) return JSON.parse(raw) as Account[];
   } catch {}
-  return SEEDED_ACCOUNTS.map((a) => ({ ...a, tickets: [...a.tickets] }));
+  return HARDCODED_ACCOUNTS.map((a) => ({ ...a, tickets: [...a.tickets] }));
 }
 
 function saveAccounts(accounts: Account[]) {
@@ -118,10 +123,11 @@ interface AppContextType {
   setSelectedOption: (option: ReasonedOption) => void;
   setSelectedClass: (cls: TrainClass) => void;
   setLoggedInAccount: (account: Account) => void;
+  registerAccount: (account: Account) => void;
   addTicket: (ticket: StoredTicket) => void;
   setCurrentBooking: (ticket: StoredTicket) => void;
   reset: () => void;
-  findAccount: (mobileLast4: string) => Account;
+  findAccount: (mobileLast4: string) => Account | undefined;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -132,19 +138,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     selectedOption: null,
     selectedClass: null,
     loggedInAccount: null,
-    accounts: SEEDED_ACCOUNTS.map((a) => ({ ...a, tickets: [...a.tickets] })),
+    accounts: HARDCODED_ACCOUNTS.map((a) => ({ ...a, tickets: [...a.tickets] })),
     currentBooking: null,
   });
 
-  // Hydrate accounts from sessionStorage on mount
   useEffect(() => {
     const stored = loadAccounts();
-    // Only override if different from initial
-    dispatch({ type: "RESET" });
-    // We rely on seeded accounts for simplicity; sessionStorage used for new bookings
+    if (stored && stored.length > 0) {
+      stored.forEach((acc) => dispatch({ type: "REGISTER_ACCOUNT", payload: acc }));
+    }
   }, []);
 
-  // Persist accounts whenever they change
   useEffect(() => {
     saveAccounts(state.accounts);
   }, [state.accounts]);
@@ -153,21 +157,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setSelectedOption = (option: ReasonedOption) => dispatch({ type: "SET_OPTION", payload: option });
   const setSelectedClass = (cls: TrainClass) => dispatch({ type: "SET_CLASS", payload: cls });
   const setLoggedInAccount = (account: Account) => dispatch({ type: "SET_ACCOUNT", payload: account });
+  const registerAccount = (account: Account) => dispatch({ type: "REGISTER_ACCOUNT", payload: account });
   const addTicket = (ticket: StoredTicket) => dispatch({ type: "ADD_TICKET", payload: ticket });
   const setCurrentBooking = (ticket: StoredTicket) => dispatch({ type: "SET_BOOKING", payload: ticket });
   const reset = () => dispatch({ type: "RESET" });
 
-  const findAccount = (mobileLast4: string): Account => {
-    return (
-      state.accounts.find((a) => a.mobileLast4 === mobileLast4) ??
-      state.accounts.find((a) => a.mobileLast4 === "3300")!
-    );
+  const findAccount = (mobileLast4: string): Account | undefined => {
+    return state.accounts.find((a) => a.mobileLast4 === mobileLast4);
   };
 
   return (
     <AppContext.Provider value={{
       state, setParsedIntent, setSelectedOption, setSelectedClass,
-      setLoggedInAccount, addTicket, setCurrentBooking, reset, findAccount,
+      setLoggedInAccount, registerAccount, addTicket, setCurrentBooking, reset, findAccount,
     }}>
       {children}
     </AppContext.Provider>
