@@ -1,6 +1,6 @@
-﻿import { CITIES, CityEntry } from "./cities";
+import { CITIES, CityEntry } from "./cities";
 import { seededRandom } from "./seededRandom";
-import { RouteData } from "./types";
+import { RouteData, TrainClass } from "./types";
 
 function haversineKm(a: CityEntry, b: CityEntry): number {
   const R = 6371;
@@ -46,7 +46,7 @@ function trainNumber(rand: () => number): string {
 export function generateRoute(originName: string, destName: string): RouteData | null {
   const origin = findCity(originName);
   const dest = findCity(destName);
-  if (!origin || !dest) return null; // truly unrecognized city — still show honest "unknown city" state, not a fabricated route
+  if (!origin || !dest) return null; // truly unrecognized city
 
   const rand = seededRandom(`${origin.name}->${dest.name}`);
   const distanceKm = Math.round(haversineKm(origin, dest));
@@ -54,76 +54,77 @@ export function generateRoute(originName: string, destName: string): RouteData |
   const durationHours = Math.round((distanceKm / avgSpeedKmh) * 10) / 10;
   const junction = nearestJunctionToMidpoint(origin, dest);
 
-  const isDirectConfirmed = rand() < 0.15; // ~15% of generated routes need no optimization at all
+  const isDirectConfirmed = rand() < 0.15; // ~15% of generated routes need no optimization
   const wlDepth = 20 + Math.floor(rand() * 70);
-  const price3A = Math.max(250, Math.round(distanceKm * 1.3)); // ensure positive realistic prices
+  const price3A = Math.max(250, Math.round(distanceKm * 1.3));
+  const durationStr = `${Math.floor(durationHours)}h ${Math.round((durationHours % 1) * 60)}m`;
+  const splitDurationStr = `${Math.floor(durationHours * 1.1)}h ${Math.round(((durationHours * 1.1) % 1) * 60)}m`;
+
+  const classes: TrainClass[] = ["3A", "SL", "2A", "1A"];
 
   return {
-    originCity: origin.name,
-    destinationCity: dest.name,
-    defaultClass: "3A",
-    generated: true, // IMPORTANT: UI must show this is a procedurally generated example, not curated
-    options: [
-      {
-        id: `${origin.stationCode}-${dest.stationCode}-direct`,
-        type: "DIRECT",
-        legs: [
+    originCode: origin.stationCode,
+    originName: origin.name,
+    destinationCode: dest.stationCode,
+    destinationName: dest.name,
+    generated: true,
+    aliases: {
+      origin: [origin.name.toLowerCase(), ...origin.aliases.map((a) => a.toLowerCase())],
+      destination: [dest.name.toLowerCase(), ...dest.aliases.map((a) => a.toLowerCase())],
+    },
+    classes: classes.map((cls) => {
+      const classMultiplier = cls === "1A" ? 3.0 : cls === "2A" ? 1.8 : cls === "3A" ? 1.0 : 0.35;
+      const fare = Math.round(price3A * classMultiplier);
+      const splitFare = fare + Math.round(150 * classMultiplier);
+
+      return {
+        class: cls,
+        options: [
           {
+            type: "DIRECT" as const,
             trainNumber: trainNumber(rand),
             trainName: `${dest.name} Express`,
-            departureTime: "18:30",
-            arrivalTime: "—",
-            dateOffset: Math.ceil(durationHours / 24),
-            fromStation: `${origin.name} (${origin.stationCode})`,
-            toStation: `${dest.name} (${dest.stationCode})`,
-            class: "3A",
-            status: isDirectConfirmed ? "CONFIRMED" : `WL ${wlDepth}`,
-            price: price3A,
+            departure: "18:30",
+            arrival: "08:30+1",
+            duration: durationStr,
+            fare,
+            status: (isDirectConfirmed ? "CONFIRMED" : "WL") as "CONFIRMED" | "WL",
+            waitlistNumber: isDirectConfirmed ? undefined : wlDepth,
           },
-        ],
-        totalPrice: price3A,
-        totalDurationHours: durationHours,
-        confidenceScore: isDirectConfirmed ? 95 : Math.max(5, 30 - wlDepth / 3),
-      },
-      ...(isDirectConfirmed
-        ? []
-        : [
-            {
-              id: `${origin.stationCode}-${dest.stationCode}-split`,
-              type: "SPLIT" as const,
-              splitCity: junction.name,
-              layoverHours: 2 + Math.round(rand() * 2 * 10) / 10,
-              legs: [
+          ...(isDirectConfirmed
+            ? []
+            : [
                 {
+                  type: "SPLIT" as const,
                   trainNumber: trainNumber(rand),
                   trainName: `${junction.name} Express`,
-                  departureTime: "19:00",
-                  arrivalTime: "—",
-                  dateOffset: 1,
-                  fromStation: `${origin.name} (${origin.stationCode})`,
-                  toStation: `${junction.name} (${junction.stationCode})`,
-                  class: "3A",
-                  status: "CONFIRMED",
-                  price: Math.max(100, Math.round(haversineKm(origin, junction) * 1.3)),
+                  departure: "19:00",
+                  arrival: "10:30+1",
+                  duration: splitDurationStr,
+                  fare: splitFare,
+                  status: "CONFIRMED" as const,
+                  splitStation: `${junction.name} Jn`,
+                  splitLayoverMinutes: Math.round((2 + rand() * 2) * 60),
+                  leg1: {
+                    trainNumber: trainNumber(rand),
+                    trainName: `${junction.name} Express`,
+                    from: `${origin.name} (${origin.stationCode})`,
+                    to: `${junction.name} (${junction.stationCode})`,
+                    departure: "19:00",
+                    arrival: "02:30+1",
+                  },
+                  leg2: {
+                    trainNumber: trainNumber(rand),
+                    trainName: `${dest.name} Superfast Express`,
+                    from: `${junction.name} (${junction.stationCode})`,
+                    to: `${dest.name} (${dest.stationCode})`,
+                    departure: "04:30+1",
+                    arrival: "10:30+1",
+                  },
                 },
-                {
-                  trainNumber: trainNumber(rand),
-                  trainName: `${dest.name} Superfast Express`,
-                  departureTime: "—",
-                  arrivalTime: "—",
-                  dateOffset: 1,
-                  fromStation: `${junction.name} (${junction.stationCode})`,
-                  toStation: `${dest.name} (${dest.stationCode})`,
-                  class: "3A",
-                  status: "CONFIRMED",
-                  price: Math.max(100, Math.round(haversineKm(junction, dest) * 1.3)),
-                },
-              ],
-              totalPrice: price3A + 150,
-              totalDurationHours: durationHours * 1.1,
-              confidenceScore: 85 + Math.floor(rand() * 10),
-            },
-          ]),
-    ],
+              ]),
+        ],
+      };
+    }),
   };
 }

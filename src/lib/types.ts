@@ -1,4 +1,4 @@
-﻿// â”€â”€ Shared types for the Waitlist Route Optimizer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Shared types for the Waitlist Route Optimizer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type TrainClass = "1A" | "2A" | "3A" | "SL" | "CC";
 export type BookingStatus = "CONFIRMED" | "WL" | "RAC";
@@ -95,6 +95,7 @@ export interface RouteResult {
   options: ReasonedOption[];
   directStatus?: BookingStatus;
   directWL?: number;
+  generated?: boolean;
 }
 
 // â”€â”€ Auth / Accounts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Deterministic reasoning engine — ZERO LLM calls inside this file.
  * Pure function: ParsedIntent → RouteResult.
  * Verified: grep for "openai\|fetch\|axios\|gpt\|gemini" in this file should return nothing.
@@ -109,6 +109,7 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       selectedClass,
       trace,
       options: [],
+      generated: route.generated,
     };
   }
 
@@ -141,6 +142,7 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       selectedClass,
       trace,
       directStatus: "CONFIRMED",
+      generated: route.generated,
       options: [
         {
           id: "direct",
@@ -265,6 +267,7 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
     trace,
     directStatus: directOpt?.status,
     directWL: directOpt?.waitlistNumber,
+    generated: route.generated,
     options,
   };
 }

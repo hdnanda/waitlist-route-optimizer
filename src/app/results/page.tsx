@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -109,9 +109,16 @@ export default function ResultsPage() {
         <button onClick={() => router.push("/tickets")} className="text-xs text-[#B9BDD1] font-mono">MY TICKETS</button>
       </div>
 
-      <span className="font-mono text-[10px] font-bold tracking-widest text-[#E8A33D]">
-        {result ? (result.routeFound ? `${result.options.length} ROUTE${result.options.length !== 1 ? "S" : ""} FOUND` : "ROUTE NOT IN DATASET") : "ROUTE ENGINE / RUNNING"}
-      </span>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="font-mono text-[10px] font-bold tracking-widest text-[#E8A33D]">
+          {result ? (result.routeFound ? `${result.options.length} ROUTE${result.options.length !== 1 ? "S" : ""} FOUND` : "ROUTE NOT IN DATASET") : "ROUTE ENGINE / RUNNING"}
+        </span>
+        {result?.generated && (
+          <span className="rounded-full border border-[#E8A33D]/50 bg-[#E8A33D]/15 px-2 py-0.5 text-[10px] font-mono font-bold text-[#E8A33D]">
+            ⚙ GENERATED EXAMPLE
+          </span>
+        )}
+      </div>
 
       <h1 className="mt-2 font-serif text-2xl font-semibold leading-8">
         {result?.directStatus === "CONFIRMED"
@@ -234,6 +241,7 @@ export default function ResultsPage() {
                     ["REAL PLAN", "The AI does not calculate routes or times. A deterministic backend computes split-ticket permutations, quota checks, and layovers. The OpenAI model is used only to (1) parse the user's natural-language request and (2) write the plain-language explanations."],
                     ["REAL PLAN", "Confidence percentages are static mock values standing in for what would be a historical clearance-rate calculation over real PRS chart data in production."],
                     ["REAL PLAN", "Payment deduction without ticket confirmation is IRCTC's most common real complaint. A production version would use idempotent payment intents with webhook-based reconciliation instead of IRCTC's current fire-and-forget flow."],
+                    ["REAL PLAN", "Our 16 hand-modeled routes reflect realistic current train patterns. Any other route is generated on the spot using real geographic distance and known junction data — in production this layer would be replaced by live PRS queries, but the app never simply says no."],
                   ].map(([tag, text], i) => (
                     <div key={i} className="flex gap-2.5">
                       <span className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold ${tag === "MOCK" ? "bg-[#E8A33D]/20 text-[#E8A33D]" : "bg-[#3F8F5F]/20 text-[#3F8F5F]"}`}>
