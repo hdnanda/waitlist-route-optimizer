@@ -1,4 +1,4 @@
-﻿/**
+/**
  * /api/parse — OpenAI structured-output call for natural-language intent extraction.
  *
  * Attribution: This server-side API route implements the primary parsing path
@@ -38,6 +38,9 @@ Common Hindi/Hinglish phrases:
 `;
 
 async function callOpenAI(input: string): Promise<Record<string, unknown> | null> {
+  if (!process.env.OPENAI_API_KEY) {
+    return null; // Skip OpenAI immediately if no key, fall back to deterministic regex
+  }
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
