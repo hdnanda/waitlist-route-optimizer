@@ -105,7 +105,11 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
   const text = userInput.trim();
 
   // â”€â”€ Step 1: Strip class codes before city regex (integration fix) â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const { trainClass, cleaned } = stripClassFromText(text);
+    // ── Step 0: Strip conversational filler that breaks the greedy regex ──────
+  let preCleaned = text.replace(/^(?:i want to go|i want to travel|i need to go|please book|book tickets?|looking for|search for|find trains?)\s+(?:from\s+)?/i, "");
+
+  // ── Step 1: Strip class codes before city regex (integration fix) ─────────
+  const { trainClass, cleaned } = stripClassFromText(preCleaned);
 
   // â”€â”€ Step 2: Original Codex regex â€” verbatim from App.jsx â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const match = cleaned.match(
@@ -237,3 +241,4 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
     parseError: true,
   };
 }
+
