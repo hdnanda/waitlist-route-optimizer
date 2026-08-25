@@ -15,20 +15,6 @@ const EXAMPLE_CHIPS = [
   { label: "Kolkata → Delhi", input: "Kolkata to Delhi 3A" },
 ];
 
-function ReasoningTrace({ lines }: { lines: string[] }) {
-  return (
-    <div className="rounded-xl border-l-2 border-[#E8A33D] bg-black/40 p-4">
-      {lines.map((line, i) => (
-        <motion.p key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: i * 0.22, duration: 0.3 }}
-          className="mb-2 font-mono text-xs leading-5 text-[#94A3B8] last:mb-0">
-          {line}
-        </motion.p>
-      ))}
-    </div>
-  );
-}
-
 export default function ResultsPage() {
   const router = useRouter();
   const { state, setParsedIntent, setSelectedOption, setSelectedClass } = useApp();
@@ -36,7 +22,6 @@ export default function ResultsPage() {
   const [result, setResult] = useState<RouteResult | null>(null);
   const [selectedClass, setLocalClass] = useState<TrainClass | null>(parsedIntent?.class ?? null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [showTrace, setShowTrace] = useState(true);
 
   const runEngine = useCallback((cls?: TrainClass) => {
     if (!parsedIntent || parsedIntent.parseError) return;
@@ -176,24 +161,6 @@ export default function ResultsPage() {
           </motion.section>
         )}
       </AnimatePresence>
-
-      {/* Reasoning trace */}
-      {result && (
-        <section className="mt-5">
-          <button onClick={() => setShowTrace((v) => !v)}
-            className="flex w-full items-center justify-between text-xs font-bold tracking-[0.12em] text-[#B9BDD1]/70 mb-2">
-            REASONING TRACE
-            {showTrace ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
-          <AnimatePresence>
-            {showTrace && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-                <ReasoningTrace lines={result.trace} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
-      )}
 
       {/* Unknown route fallback */}
       {result && !result.routeFound && (
