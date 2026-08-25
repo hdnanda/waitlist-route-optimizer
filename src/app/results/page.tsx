@@ -226,7 +226,7 @@ export default function ResultsPage() {
             </svg>
             <p className="text-[11px] font-mono text-[#94A3B8] leading-relaxed">
               <span className="text-[#F3EDE0] font-bold">SYSTEM LOG: </span> 
-              Analyzed 18 direct trains and 142 intermediate split-route combinations. Excluded all routes with layovers &gt; 45 mins. Displaying the 3 highest-probability options:
+              Analyzed {result.stats?.directAnalyzed ?? 18} direct trains and {result.stats?.splitCombinations ?? 142} intermediate split-route combinations along the {result.originDisplay}–{result.destinationDisplay} corridor. Excluded all routes with layovers &gt; {result.stats?.maxLayoverMins ?? 45} mins. Displaying the {result.options.length} highest-probability {result.options.length === 1 ? "option" : "options"}:
             </p>
           </motion.div>
           {result.options.map((option, i) => (

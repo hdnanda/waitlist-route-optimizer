@@ -86,6 +86,12 @@ export interface ReasonedOption {
   leg2?: TrainLeg;
 }
 
+export interface OperationalStats {
+  directAnalyzed: number;
+  splitCombinations: number;
+  maxLayoverMins: number;
+}
+
 export interface RouteResult {
   routeFound: boolean;
   originDisplay: string;
@@ -96,6 +102,7 @@ export interface RouteResult {
   directStatus?: BookingStatus;
   directWL?: number;
   generated?: boolean;
+  stats?: OperationalStats;
 }
 
 // â”€â”€ Auth / Accounts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
