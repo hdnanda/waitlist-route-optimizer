@@ -261,120 +261,6 @@ export function extractSemanticDate(text: string): { date: string | null; matche
   return { date: null, matchedPhrase: null };
 }
 
-// ── Concrete Date Normalization Helper ──────────────────────────────────────
-export function normalizeToConcreteDate(rawDate: string | null | undefined): string | null {
-  if (!rawDate) return null;
-  const trimmed = rawDate.trim().toLowerCase();
-  const now = new Date();
-
-  // 1. "today", "aaj", "आज"
-  if (/^(today|aaj|आज)$/i.test(trimmed)) {
-    const day = now.getDate();
-    const month = now.toLocaleString("en-US", { month: "short" });
-    return `${day} ${month}`;
-  }
-
-  // 2. "tomorrow", "kal", "कल"
-  if (/^(tomorrow|kal|कल)$/i.test(trimmed)) {
-    const d = new Date(now);
-    d.setDate(d.getDate() + 1);
-    const day = d.getDate();
-    const month = d.toLocaleString("en-US", { month: "short" });
-    return `${day} ${month}`;
-  }
-
-  // 3. "parso", "day after tomorrow", "परसों", "in 2 days"
-  if (/^(day\s+after\s+tomorrow|parso|parson|परसों|in\s+2\s+days)$/i.test(trimmed)) {
-    const d = new Date(now);
-    d.setDate(d.getDate() + 2);
-    const day = d.getDate();
-    const month = d.toLocaleString("en-US", { month: "short" });
-    return `${day} ${month}`;
-  }
-
-  // 4. "in 3 days"
-  if (/^(in\s+3\s+days|3\s+din\s+baad)$/i.test(trimmed)) {
-    const d = new Date(now);
-    d.setDate(d.getDate() + 3);
-    const day = d.getDate();
-    const month = d.toLocaleString("en-US", { month: "short" });
-    return `${day} ${month}`;
-  }
-
-  // 5. "next [day of week]" (e.g. "next monday")
-  const nextDayMatch = trimmed.match(/^next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i);
-  if (nextDayMatch) {
-    const targetDayName = nextDayMatch[1].toLowerCase();
-    const dayMap: Record<string, number> = {
-      sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
-      thursday: 4, friday: 5, saturday: 6
-    };
-    const targetDayIdx = dayMap[targetDayName];
-    if (targetDayIdx !== undefined) {
-      const currentDayIdx = now.getDay();
-      let diff = (targetDayIdx - currentDayIdx + 7) % 7;
-      if (diff === 0) diff = 7; // Next occurrence
-      const d = new Date(now);
-      d.setDate(d.getDate() + diff);
-      return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
-    }
-  }
-
-  // 6. "this weekend", "coming weekend", "next weekend"
-  if (/^(this\s+weekend|coming\s+weekend|weekend)$/i.test(trimmed)) {
-    const d = new Date(now);
-    const dayOfWeek = d.getDay();
-    const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7;
-    d.setDate(d.getDate() + daysUntilSat);
-    return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
-  }
-  if (/^(next\s+weekend)$/i.test(trimmed)) {
-    const d = new Date(now);
-    const dayOfWeek = d.getDay();
-    const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7;
-    d.setDate(d.getDate() + daysUntilSat + 7);
-    return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
-  }
-
-  // 7. Numeric dates like "29/11", "29-11", "2026-11-29"
-  const slashMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-]\d{2,4})?$/);
-  if (slashMatch) {
-    const dayNum = parseInt(slashMatch[1], 10);
-    const monthNum = parseInt(slashMatch[2], 10);
-    if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12) {
-      const d = new Date(now.getFullYear(), monthNum - 1, dayNum);
-      return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
-    }
-  }
-
-  // 8. "29 November" -> normalize month to short name "29 Nov"
-  const wordMatch = trimmed.match(/^(\d{1,2})\s+([a-z]+)$/i);
-  if (wordMatch) {
-    const dayNum = wordMatch[1];
-    const monthStr = wordMatch[2];
-    const MONTH_MAP: Record<string, string> = {
-      january: "Jan", jan: "Jan",
-      february: "Feb", feb: "Feb",
-      march: "Mar", mar: "Mar",
-      april: "Apr", apr: "Apr",
-      may: "May",
-      june: "Jun", jun: "Jun",
-      july: "Jul", jul: "Jul",
-      august: "Aug", aug: "Aug",
-      september: "Sep", sep: "Sep",
-      october: "Oct", oct: "Oct",
-      november: "Nov", nov: "Nov",
-      december: "Dec", dec: "Dec",
-    };
-    const normMonth = MONTH_MAP[monthStr.toLowerCase()];
-    if (normMonth) {
-      return `${dayNum} ${normMonth}`;
-    }
-  }
-
-  return rawDate;
-}
-
 const DATE_PATTERNS: Array<[RegExp, string]> = [
   // 1. Day with optional ordinal suffix (st, nd, rd, th) + optional "of" + Month: "29th of November", "29 Nov", "the 29th of November"
   [/(?:the\s+)?\b(\d{1,2})(?:st|nd|rd|th)?(?:\s+of)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i, "$1 $2"],
@@ -642,43 +528,89 @@ function logParserDiagnostics(userInput: string, parsed: ParsedIntent, source: s
 }
 
 /**
+ * 1. THE STUTTER PROBLEM:
+ * Strip conversational stutters, self-corrections (e.g. "no wait", "I mean", "actually", "sorry", "nahi"),
+ * and the incorrect word immediately preceding them.
+ */
+export function stripStuttersAndCorrections(text: string): string {
+  const stutterRegex = /(?:(?:from|to|se|tak|से|तक)\s+)?([A-Za-z\u0900-\u097F]+(?:\s+[A-Za-z\u0900-\u097F]+)?)\s*,?\s*(?:no\s+wait(?:\s+i\s+mean)?|wait\s+no|wait|no\s+no|i\s+mean|actually|sorry|scratch\s+that|make\s+that|correction|instead\s+of|nahi|nahin|arrey\s+nahi|are\s+nahi|ruko|matlab)\s*,?\s*(?:i\s+mean\s+)?/gi;
+  return text.replace(stutterRegex, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * 2. THE MULTI-CITY PROBLEM:
+ * Strip conversational location preambles ("I am in Chennai, but book a ticket from Hyderabad to Mumbai")
+ * by finding action boundaries ("but book", "need", "going", "want", "tickets", "jana hai") and ignoring text before them.
+ */
+export function stripLocationPreamble(text: string): string {
+  const preambleRegex = /^(?:i\s+am\s+in|currently\s+in|sitting\s+in|staying\s+in|i'm\s+in|located\s+in|main\s+[A-Za-z\u0900-\u097F\s]+\s+me\s+hu|hum\s+[A-Za-z\u0900-\u097F\s]+\s+me\s+hai)\s+([A-Za-z\u0900-\u097F\s]+?)(?:,|;|\.|\s+)?(?:\s+(?:but|and|so|par|lekin|to|toh)\s+)?\s*(?=(?:please\s+)?(?:book|find|search|get|need|want|looking\s+for|traveling|travelling|going|tickets?|trains?|bhejna|jana|jaana|chahiye|चाहिए|भेजना|जाना)\b|from\s+|से\s+)/i;
+  return text.replace(preambleRegex, "").replace(/\s+/g, " ").trim();
+}
+
+/**
  * deterministicFallback — extractRouteIntent() regex and city-matching logic.
  */
 export function deterministicFallback(userInput: string): ParsedIntent | null {
   const text = userInput.trim();
 
-  // ── Step 0: Strip conversational filler ──────
-  let preCleaned = text.replace(/^(?:i want to go|i want to travel|i need to go|please book|book tickets?|looking for|search for|find trains?|मुझे|हमे|हमको|कृपया|टिकट|ट्रेन)\s+(?:from\s+|से\s+)?/i, "");
+  // ── Step 0: Pre-processing (Stutters & Context Preamble) ──────
+  // 1. Strip stutters & self-corrections ("from Delhi no wait I mean from Agra")
+  const unstuttered = stripStuttersAndCorrections(text);
+  // 2. Strip multi-city context preamble ("I am in Chennai, but book a ticket from Hyderabad to Mumbai")
+  const uncontexted = stripLocationPreamble(unstuttered);
+  // 3. Strip conversational action filler
+  let preCleaned = uncontexted.replace(/^(?:i want to go|i want to travel|i need to go|please book|book tickets?|book\s+(?:a\s+)?tickets?|looking for|search for|find trains?|want to travel|mujhe|hame|hamko|kripya|ticket|train|मुझे|हमे|हमको|कृपया|टिकट|ट्रेन)\s+(?:from\s+|से\s+)?/i, "");
 
   // ── Step 1: Strip class codes & sentiments before city regex ─────────
   const { trainClass, cleaned } = stripClassFromText(preCleaned);
 
-  // ── Step 2: Check for inverted Hindi syntax: "[Dest] bhejna hai [Origin] se" ──
-  const invertedMatch = cleaned.match(
-    /([A-Za-z\u0900-\u097F\s]+?)\s+(?:bhejna|jana|jaana|chahiye|भेजना|जाना|चाहिए).*?\s+([A-Za-z\u0900-\u097F\s]+?)\s+(?:se|से)\b/i
-  );
-
   let origin: string | null = null;
   let destination: string | null = null;
 
-  if (invertedMatch && invertedMatch[1] && invertedMatch[2]) {
-    const rawDest = invertedMatch[1]
-      .trim()
-      .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|papa\s+ko|papaji\s+ko|pitaji\s+ko|bhai\s+ko|bhaiya\s+ko|sister\s+ko|didi\s+ko|dost\s+ko|family\s+ko|wife\s+ko|husband\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|पापा\s+को|पिताजी\s+को|भाई\s+को|भैया\s+को|दीदी\s+को|दोस्त\s+को|परिवार\s+को|मुझे|हमे)\s+/i, "")
-      .replace(/\s+(ke\s+liye|के\s+लिए).*$/i, "");
-    const rawOrigin = invertedMatch[2]
-      .trim()
-      .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|papa\s+ko|papaji\s+ko|pitaji\s+ko|bhai\s+ko|bhaiya\s+ko|sister\s+ko|didi\s+ko|dost\s+ko|family\s+ko|wife\s+ko|husband\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|पापा\s+को|पिताजी\s+को|भाई\s+को|भैया\s+को|दीदी\s+को|दोस्त\s+को|परिवार\s+को|मुझे|हमे)\s+/i, "");
+  // ── Step 2a: HIERARCHY LEVEL 1 — Inverted English Syntax: "to [Dest] from/departing [Origin]" ──
+  const invertedEnglishMatch = cleaned.match(
+    /(?:tickets?|trains?|seats?|booking)?\s*(?:to|towards|tak|तक|के\s+लिए)\s+([A-Za-z\u0900-\u097F\s]+?)\s+(?:from|departing\s+from|leaving\s+from|se|से)\s+([A-Za-z\u0900-\u097F\s]+?)(?:\s+(?:on|next|for|ko|during|ke\s+liye|को|के\s+लिए|पर)\s+|$)/i
+  );
 
-    const o = matchCity(rawOrigin);
+  if (invertedEnglishMatch && invertedEnglishMatch[1] && invertedEnglishMatch[2]) {
+    const rawDest = invertedEnglishMatch[1].trim();
+    const rawOrigin = invertedEnglishMatch[2]
+      .trim()
+      .replace(/\s+(bhejna|bhejna\s+hai|bhejo|jana|jana\s+hai|chahiye|tickets?|ticket|train|trains|gadi|gaadi|on|next|ke\s+liye|wala|wali).*$/i, "");
+
     const d = matchCity(rawDest);
+    const o = matchCity(rawOrigin);
     if (o && d && o.toLowerCase() !== d.toLowerCase()) {
       origin = o;
       destination = d;
     }
   }
 
-  // ── Step 2b: Standard "Origin to/se Destination" regex ─────────────────────
+  // ── Step 2b: HIERARCHY LEVEL 2 — Inverted Hindi Syntax: "[Dest] bhejna/jana hai [Origin] se" ──
+  if (!origin || !destination) {
+    const invertedHindiMatch = cleaned.match(
+      /([A-Za-z\u0900-\u097F\s]+?)\s+(?:bhejna|jana|jaana|chahiye|भेजना|जाना|चाहिए).*?\s+([A-Za-z\u0900-\u097F\s]+?)\s+(?:se|से)\b/i
+    );
+
+    if (invertedHindiMatch && invertedHindiMatch[1] && invertedHindiMatch[2]) {
+      const rawDest = invertedHindiMatch[1]
+        .trim()
+        .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|papa\s+ko|papaji\s+ko|pitaji\s+ko|bhai\s+ko|bhaiya\s+ko|sister\s+ko|didi\s+ko|dost\s+ko|family\s+ko|wife\s+ko|husband\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|पापा\s+को|पिताजी\s+को|भाई\s+को|भैया\s+को|दीदी\s+को|दोस्त\s+को|परिवार\s+को|मुझे|हमे)\s+/i, "")
+        .replace(/\s+(ke\s+liye|के\s+लिए).*$/i, "");
+      const rawOrigin = invertedHindiMatch[2]
+        .trim()
+        .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|papa\s+ko|papaji\s+ko|pitaji\s+ko|bhai\s+ko|bhaiya\s+ko|sister\s+ko|didi\s+ko|dost\s+ko|family\s+ko|wife\s+ko|husband\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|पापा\s+को|पिताजी\s+को|भाई\s+को|भैया\s+को|दीदी\s+को|दोस्त\s+को|परिवार\s+को|मुझे|हमे)\s+/i, "");
+
+      const o = matchCity(rawOrigin);
+      const d = matchCity(rawDest);
+      if (o && d && o.toLowerCase() !== d.toLowerCase()) {
+        origin = o;
+        destination = d;
+      }
+    }
+  }
+
+  // ── Step 2c: HIERARCHY LEVEL 3 — Standard "Origin to/se Destination" regex ─────────────────────
   if (!origin || !destination) {
     const match = cleaned.match(
       /(?:from\s+|से\s+)?([A-Za-z\u0900-\u097F\s]+?)\s+(?:to|se|towards|tak|से|तक)\s+([A-Za-z\u0900-\u097F\s]+?)(?:\s+(?:on|next|for|ko|during|ke\s+liye|को|के\s+लिए|पर)\s+|$)/i
@@ -758,12 +690,10 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
     }
   }
 
-  const concreteDate = normalizeToConcreteDate(date);
-
   return {
     origin,
     destination,
-    date: concreteDate,
+    date,
     passengerNote: /grandfather|grandpa|dada|dadaji|nana|nanaji|दादा|नाना/i.test(text)
       ? "For grandfather"
       : /grandmother|grandma|dadi|dadiji|nani|naniji|दादी|नानी/i.test(text)
@@ -837,7 +767,7 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
 
     const enhancedResult = {
       ...result,
-      date: normalizeToConcreteDate(dateToUse),
+      date: dateToUse,
       class: classToUse,
     };
 
