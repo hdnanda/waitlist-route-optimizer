@@ -539,12 +539,19 @@ export function stripStuttersAndCorrections(text: string): string {
 
 /**
  * 2. THE MULTI-CITY PROBLEM:
- * Strip conversational location preambles ("I am in Chennai, but book a ticket from Hyderabad to Mumbai")
- * by finding action boundaries ("but book", "need", "going", "want", "tickets", "jana hai") and ignoring text before them.
+ * Strip conversational location preambles ("I am currently in Bangalore and I want a ticket from Ahmedabad to Agra")
+ * by finding action boundaries ("but book", "and I want a ticket from", "need", "going", "want", "tickets", "jana hai")
+ * and ignoring text before them.
  */
 export function stripLocationPreamble(text: string): string {
-  const preambleRegex = /^(?:i\s+am\s+in|currently\s+in|sitting\s+in|staying\s+in|i'm\s+in|located\s+in|main\s+[A-Za-z\u0900-\u097F\s]+\s+me\s+hu|hum\s+[A-Za-z\u0900-\u097F\s]+\s+me\s+hai)\s+([A-Za-z\u0900-\u097F\s]+?)(?:,|;|\.|\s+)?(?:\s+(?:but|and|so|par|lekin|to|toh)\s+)?\s*(?=(?:please\s+)?(?:book|find|search|get|need|want|looking\s+for|traveling|travelling|going|tickets?|trains?|bhejna|jana|jaana|chahiye|चाहिए|भेजना|जाना)\b|from\s+|से\s+)/i;
-  return text.replace(preambleRegex, "").replace(/\s+/g, " ").trim();
+  // English: "I am (currently) in [City] (and/but/so) (I want/need to book a ticket) (from)?"
+  const englishPreamble = /^(?:i\s+am\s+(?:currently\s+)?in|currently\s+in|sitting\s+in|staying\s+in|i'm\s+in|located\s+in)\s+([A-Za-z\u0900-\u097F\s]+?)(?:,|;|\.|\s+)?(?:\s+(?:but|and|so|then)\s+)?(?:\s*i\s+(?:want|need|would\s+like|plan)\s+(?:to\s+)?(?:book|travel|find|get)?\s*(?:a\s+)?(?:tickets?|trains?|seats?)?\s*(?:for|to|from)?)?\s*(?=(?:please\s+)?(?:book|find|search|get|need|want|looking\s+for|traveling|travelling|going|tickets?|trains?|bhejna|jana|jaana|chahiye|चाहिए|भेजना|जाना)\b|from\s+|से\s+|to\s+|तक\s+)/i;
+  
+  // Hindi: "[City] me hu par [Journey]" or "main [City] me hu lekin [Journey]"
+  const hindiPreamble = /^(?:(?:main|hum|mera|hamara)\s+)?([A-Za-z\u0900-\u097F\s]+?)\s+(?:me\s+hu|mein\s+hu|me\s+hain|mein\s+hain|में\s+हूँ|में\s+हूं|में\s+हैं)\s*,?\s*(?:par|lekin|parantu|aur|to|toh|पर|लेकिन|और|तो)\s*/i;
+
+  let cleaned = text.replace(englishPreamble, "").replace(hindiPreamble, "").trim();
+  return cleaned.replace(/\s+/g, " ").trim();
 }
 
 /**
@@ -747,6 +754,7 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
     }
   };
 
+  const deterministicRes = deterministicFallback(trimmed);
   const result = await tryApiCall();
 
   if (
@@ -756,19 +764,30 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
     result.destination &&
     result.origin.toLowerCase() !== result.destination.toLowerCase()
   ) {
-    // If AI / API call returned origin and destination but missed date or class, backfill with deterministic patterns!
-    let dateToUse = result.date;
-    let classToUse = result.class;
-    if (!dateToUse || !classToUse) {
-      const fb = deterministicFallback(trimmed);
-      if (!dateToUse && fb?.date) dateToUse = fb.date;
-      if (!classToUse && fb?.class) classToUse = fb.class;
+    let originToUse = result.origin;
+    let destToUse = result.destination;
+
+    // If deterministic parser found a clear journey (e.g. "from Ahmedabad to Agra"),
+    // and the API mistakenly grabbed a stripped current-location preamble (e.g. "Bangalore"),
+    // override with the true deterministic origin/destination!
+    if (deterministicRes && deterministicRes.origin && deterministicRes.destination) {
+      if (deterministicRes.origin.toLowerCase() !== deterministicRes.destination.toLowerCase()) {
+        originToUse = deterministicRes.origin;
+        destToUse = deterministicRes.destination;
+      }
     }
 
-    const enhancedResult = {
-      ...result,
+    const dateToUse = result.date ?? deterministicRes?.date ?? null;
+    const classToUse = result.class ?? deterministicRes?.class ?? null;
+
+    const enhancedResult: ParsedIntent = {
+      origin: originToUse,
+      destination: destToUse,
       date: dateToUse,
       class: classToUse,
+      passengerNote: result.passengerNote ?? deterministicRes?.passengerNote ?? null,
+      confidence: "high",
+      fromCache: false,
     };
 
     logParserDiagnostics(trimmed, enhancedResult, "AI / OpenAI Engine");
@@ -777,7 +796,7 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
   }
 
   // ── Client-side deterministic fallback (safety net) ─────────────────────────
-  const fallback = deterministicFallback(trimmed);
+  const fallback = deterministicRes ?? deterministicFallback(trimmed);
   if (fallback) {
     if (
       fallback.origin &&
