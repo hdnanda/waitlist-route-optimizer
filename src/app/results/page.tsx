@@ -1,8 +1,17 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ChevronDown, ChevronUp, Info, Database } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  Database,
+  Calendar,
+  Sparkles,
+  AlertCircle,
+} from "lucide-react";
 import { getRankedOptions } from "@/lib/engine";
 import { useApp } from "@/lib/context";
 import TicketCard from "@/components/TicketCard";
@@ -15,6 +24,26 @@ const EXAMPLE_CHIPS = [
   { label: "Kolkata → Delhi", input: "Kolkata to Delhi 3A" },
 ];
 
+function formatQuickDate(daysAhead: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  const day = d.getDate();
+  const month = d.toLocaleString("en-US", { month: "short" });
+  return `${day} ${month}`;
+}
+
+function formatPickedDate(isoDateStr: string): string {
+  if (!isoDateStr) return "";
+  const parts = isoDateStr.split("-");
+  if (parts.length === 3) {
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const day = d.getDate();
+    const month = d.toLocaleString("en-US", { month: "short" });
+    return `${day} ${month}`;
+  }
+  return isoDateStr;
+}
+
 export default function ResultsPage() {
   const router = useRouter();
   const { state, setParsedIntent, setSelectedOption, setSelectedClass } = useApp();
@@ -22,6 +51,14 @@ export default function ResultsPage() {
   const [result, setResult] = useState<RouteResult | null>(null);
   const [selectedClass, setLocalClass] = useState<TrainClass | null>(parsedIntent?.class ?? null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+
+  // ── Spotlight Focus State ──────────────────────────────────────────────────
+  const [spotlightMissing, setSpotlightMissing] = useState<("class" | "date")[] | null>(null);
+  const [pendingBookingOption, setPendingBookingOption] = useState<ReasonedOption | null>(null);
+  const [spotlightShakeCount, setSpotlightShakeCount] = useState(0);
+  const [isInitialSpotlightPulse, setIsInitialSpotlightPulse] = useState(false);
+  const selectorsRef = useRef<HTMLDivElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const runEngine = useCallback((cls?: TrainClass) => {
     if (!parsedIntent || parsedIntent.parseError) return;
@@ -35,22 +72,109 @@ export default function ResultsPage() {
         setLocalClass(parsedIntent.class);
         runEngine(parsedIntent.class);
       } else {
-        // No class in parse — show class selector first, run with default
         runEngine();
       }
     }
   }, [parsedIntent]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Class resolution ───────────────────────────────────────────────────────
   const handleClassChange = (cls: TrainClass) => {
     setLocalClass(cls);
     setSelectedClass(cls);
+    if (parsedIntent) {
+      setParsedIntent({ ...parsedIntent, class: cls });
+    }
     const r = getRankedOptions(parsedIntent!, cls);
     setResult(r);
+
+    // If currently spotlighting, check if this was a missing field
+    if (spotlightMissing?.includes("class")) {
+      const remaining = spotlightMissing.filter((m) => m !== "class");
+      // Check if date is also resolved
+      const dateResolved = Boolean(parsedIntent?.date);
+      if (remaining.length === 0 || (remaining.length === 1 && remaining[0] === "date" && dateResolved)) {
+        setSpotlightMissing(null);
+        if (pendingBookingOption) {
+          const optionToBook = pendingBookingOption;
+          setPendingBookingOption(null);
+          proceedToLogin(optionToBook);
+        }
+      } else {
+        setSpotlightMissing(remaining);
+      }
+    }
+  };
+
+  const handleClassReset = () => {
+    setLocalClass(null);
+    if (parsedIntent) {
+      setParsedIntent({ ...parsedIntent, class: null });
+    }
+    setResult(null);
+  };
+
+  // ── Date resolution ────────────────────────────────────────────────────────
+  const handleDateChange = (dateStr: string | null) => {
+    if (!parsedIntent) return;
+    const updated = { ...parsedIntent, date: dateStr };
+    setParsedIntent(updated);
+    runEngine(selectedClass ?? undefined);
+
+    // If currently spotlighting, check if this was a missing field
+    if (dateStr && spotlightMissing?.includes("date")) {
+      const remaining = spotlightMissing.filter((m) => m !== "date");
+      // Check if class is also resolved
+      const classResolved = Boolean(selectedClass ?? parsedIntent.class);
+      if (remaining.length === 0 || (remaining.length === 1 && remaining[0] === "class" && classResolved)) {
+        setSpotlightMissing(null);
+        if (pendingBookingOption) {
+          const optionToBook = pendingBookingOption;
+          setPendingBookingOption(null);
+          proceedToLogin(optionToBook);
+        }
+      } else {
+        setSpotlightMissing(remaining);
+      }
+    }
+  };
+
+  // ── Hard Booking Guard & Spotlight Trigger (Part 2 & Part 3) ───────────────
+  const proceedToLogin = (option: ReasonedOption) => {
+    setSelectedOption(option);
+    router.push("/login");
+  };
+
+  const triggerSpotlight = (missing: ("class" | "date")[], option: ReasonedOption) => {
+    setSpotlightMissing(missing);
+    setPendingBookingOption(option);
+    setIsInitialSpotlightPulse(true);
+    setTimeout(() => setIsInitialSpotlightPulse(false), 1000);
+    // Smooth scroll to selectors
+    setTimeout(() => {
+      selectorsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
   };
 
   const handleBook = (option: ReasonedOption) => {
-    setSelectedOption(option);
-    router.push("/login");
+    const currentClass = selectedClass ?? parsedIntent?.class;
+    const currentDate = parsedIntent?.date;
+
+    const missing: ("class" | "date")[] = [];
+    if (!currentClass) missing.push("class");
+    if (!currentDate) missing.push("date");
+
+    // Hard validation guard: early return if class or date is null
+    if (missing.length > 0) {
+      triggerSpotlight(missing, option);
+      return; // Real early return — cannot proceed
+    }
+
+    proceedToLogin(option);
+  };
+
+  const handleBackdropClick = () => {
+    // Tapping on blurred scrim nudges the spotlighted row with a shake
+    setSpotlightShakeCount((c) => c + 1);
   };
 
   // ── Unparseable state ─────────────────────────────────────────────────────
@@ -82,10 +206,36 @@ export default function ResultsPage() {
   }
 
   const needsClassSelect = !parsedIntent.class && !selectedClass;
+  const needsDateSelect = !parsedIntent.date;
+
+  const quickDates = [
+    { label: "Today", value: formatQuickDate(0) },
+    { label: "Tomorrow", value: formatQuickDate(1) },
+    { label: "In 2 days", value: formatQuickDate(2) },
+  ];
+
+  const isDateSpotlighted = spotlightMissing?.includes("date");
+  const isClassSpotlighted = spotlightMissing?.includes("class");
 
   return (
     <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       className="relative min-h-screen px-5 pb-16 pt-6 bg-black text-white">
+      
+      {/* ── Spotlight Backdrop Scrim ────────────────────────────────────────── */}
+      <AnimatePresence>
+        {spotlightMissing && (
+          <motion.div
+            key="spotlight-scrim"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={handleBackdropClick}
+            className="fixed inset-0 z-40 bg-black/85 backdrop-blur-[6px] cursor-pointer"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <button onClick={() => router.push("/")} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition">
@@ -131,12 +281,22 @@ export default function ResultsPage() {
           </span>
         )}
         {parsedIntent.date && (
-          <span className="rounded-full border border-white/10 bg-[#080808] px-3 py-1 text-xs font-mono text-slate-400">{parsedIntent.date}</span>
+          <button
+            type="button"
+            onClick={() => handleDateChange(null)}
+            className="rounded-full border border-[#E8A33D]/70 bg-[#E8A33D]/15 px-3 py-1 text-xs font-bold text-[#E8A33D] hover:bg-[#E8A33D]/25 transition font-mono"
+            title="Tap to change date"
+          >
+            {parsedIntent.date} ✕
+          </button>
         )}
         {(selectedClass ?? parsedIntent.class) && (
-          <button onClick={() => { setLocalClass(null); setResult(null); }}
+          <button
+            type="button"
+            onClick={handleClassReset}
             className="rounded-full border border-[#E8A33D]/70 bg-[#E8A33D]/15 px-3 py-1 text-xs font-bold text-[#E8A33D] hover:bg-[#E8A33D]/25 transition font-mono"
-            title="Tap to change class">
+            title="Tap to change class"
+          >
             {selectedClass ?? parsedIntent.class} ✕
           </button>
         )}
@@ -145,22 +305,191 @@ export default function ResultsPage() {
         </span>
       </div>
 
-      {/* Class selector (only when class missing) */}
-      <AnimatePresence>
-        {needsClassSelect && (
-          <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-5">
-            <p className="text-xs font-mono font-bold tracking-[0.12em] text-[#E8A33D] mb-2">WHICH CLASS WORKS FOR YOU?</p>
-            <div className="flex gap-2.5 flex-wrap">
-              {CLASS_OPTIONS.map((cls) => (
-                <button key={cls} type="button" onClick={() => handleClassChange(cls)}
-                  className="rounded-xl border border-[#E8A33D]/60 bg-[#080808] px-4 py-2.5 text-sm font-bold text-white min-h-[44px] hover:border-[#E8A33D] hover:shadow-[0_0_12px_rgba(232,163,61,0.4)] transition active:scale-[0.97]">
-                  {cls}
-                </button>
-              ))}
+      {/* ── Unresolved Selectors Area (Date & Class) ────────────────────────── */}
+      <div ref={selectorsRef} className="mt-5 space-y-4">
+        {/* Spotlight inline banner prompt */}
+        {spotlightMissing && (
+          <motion.div
+            key={`spotlight-banner-${spotlightShakeCount}`}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              x: spotlightShakeCount > 0 ? [0, -8, 8, -6, 6, -3, 3, 0] : 0,
+            }}
+            transition={{ duration: 0.4 }}
+            className="z-50 relative flex items-center gap-2.5 rounded-xl border border-[#E8A33D] bg-[#0A0A0A] p-3.5 shadow-[0_0_16px_rgba(232,163,61,0.5)]"
+          >
+            <AlertCircle className="h-5 w-5 text-[#E8A33D] shrink-0 animate-pulse" />
+            <div>
+              <p className="text-xs font-mono font-bold text-[#E8A33D] uppercase tracking-wider">
+                Action required to book
+              </p>
+              <p className="text-sm font-semibold text-white mt-0.5">
+                {spotlightMissing.includes("date") && spotlightMissing.includes("class")
+                  ? "Pick a travel date and class to continue"
+                  : spotlightMissing.includes("date")
+                  ? "Pick a travel date to continue"
+                  : "Pick a travel class to continue"}
+              </p>
             </div>
-          </motion.section>
+          </motion.div>
         )}
-      </AnimatePresence>
+
+        {/* 1. Date selector row */}
+        <AnimatePresence>
+          {needsDateSelect && (
+            <motion.section
+              key={`date-selector-${spotlightShakeCount}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                x: spotlightShakeCount > 0 && isDateSpotlighted ? [0, -8, 8, -6, 6, -3, 3, 0] : 0,
+                boxShadow: isDateSpotlighted
+                  ? isInitialSpotlightPulse
+                    ? ["0 0 12px rgba(232,163,61,0.4)", "0 0 28px rgba(232,163,61,0.85)", "0 0 18px rgba(232,163,61,0.6)"]
+                    : "0 0 20px rgba(232,163,61,0.55), inset 0 0 10px rgba(232,163,61,0.12)"
+                  : !spotlightMissing
+                  ? ["0 0 8px rgba(232,163,61,0.2)", "0 0 16px rgba(232,163,61,0.45)", "0 0 8px rgba(232,163,61,0.2)"]
+                  : "none",
+                borderColor: isDateSpotlighted
+                  ? "rgba(232,163,61,1)"
+                  : !spotlightMissing
+                  ? ["rgba(232,163,61,0.45)", "rgba(232,163,61,0.85)", "rgba(232,163,61,0.45)"]
+                  : "rgba(232,163,61,0.4)",
+              }}
+              transition={
+                !spotlightMissing
+                  ? { duration: 2.8, repeat: Infinity, ease: "easeInOut" }
+                  : { duration: isInitialSpotlightPulse ? 1 : 0.3 }
+              }
+              exit={{ opacity: 0, height: 0 }}
+              className={`rounded-2xl bg-[#080808] p-4 border ${
+                isDateSpotlighted ? "z-50 relative ring-1 ring-[#E8A33D]" : "relative"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-[#E8A33D]" />
+                  <p className="text-xs font-mono font-bold tracking-[0.12em] text-[#E8A33D]">
+                    WHEN DO YOU WANT TO TRAVEL?
+                  </p>
+                </div>
+                {isDateSpotlighted && (
+                  <span className="rounded-full bg-[#E8A33D] text-black px-2 py-0.5 text-[9px] font-mono font-extrabold uppercase">
+                    Select date
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-2.5 flex-wrap items-center">
+                {quickDates.map((qd) => (
+                  <button
+                    key={qd.label}
+                    type="button"
+                    onClick={() => handleDateChange(qd.value)}
+                    className="rounded-xl border border-[#E8A33D]/60 bg-[#080808] px-3.5 py-2.5 text-xs font-bold text-white min-h-[44px] hover:border-[#E8A33D] hover:shadow-[0_0_12px_rgba(232,163,61,0.4)] transition active:scale-[0.97]"
+                  >
+                    <span className="block text-slate-200">{qd.label}</span>
+                    <span className="block text-[10px] font-mono text-slate-400 font-normal mt-0.5">
+                      {qd.value}
+                    </span>
+                  </button>
+                ))}
+
+                {/* "Pick a date" native picker chip */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.focus()}
+                    className="rounded-xl border border-[#E8A33D]/60 bg-[#080808] px-3.5 py-2.5 text-xs font-bold text-[#E8A33D] min-h-[44px] hover:border-[#E8A33D] hover:shadow-[0_0_12px_rgba(232,163,61,0.4)] transition flex items-center gap-2 active:scale-[0.97]"
+                  >
+                    <Calendar className="h-4 w-4 text-[#E8A33D]" />
+                    <span>Pick a date</span>
+                  </button>
+                  <input
+                    ref={dateInputRef}
+                    type="date"
+                    min={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const formatted = formatPickedDate(e.target.value);
+                        handleDateChange(formatted);
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    title="Select custom date"
+                  />
+                </div>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* 2. Class selector row */}
+        <AnimatePresence>
+          {needsClassSelect && (
+            <motion.section
+              key={`class-selector-${spotlightShakeCount}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                x: spotlightShakeCount > 0 && isClassSpotlighted ? [0, -8, 8, -6, 6, -3, 3, 0] : 0,
+                boxShadow: isClassSpotlighted
+                  ? isInitialSpotlightPulse
+                    ? ["0 0 12px rgba(232,163,61,0.4)", "0 0 28px rgba(232,163,61,0.85)", "0 0 18px rgba(232,163,61,0.6)"]
+                    : "0 0 20px rgba(232,163,61,0.55), inset 0 0 10px rgba(232,163,61,0.12)"
+                  : !spotlightMissing
+                  ? ["0 0 8px rgba(232,163,61,0.2)", "0 0 16px rgba(232,163,61,0.45)", "0 0 8px rgba(232,163,61,0.2)"]
+                  : "none",
+                borderColor: isClassSpotlighted
+                  ? "rgba(232,163,61,1)"
+                  : !spotlightMissing
+                  ? ["rgba(232,163,61,0.45)", "rgba(232,163,61,0.85)", "rgba(232,163,61,0.45)"]
+                  : "rgba(232,163,61,0.4)",
+              }}
+              transition={
+                !spotlightMissing
+                  ? { duration: 2.8, repeat: Infinity, ease: "easeInOut" }
+                  : { duration: isInitialSpotlightPulse ? 1 : 0.3 }
+              }
+              exit={{ opacity: 0, height: 0 }}
+              className={`rounded-2xl bg-[#080808] p-4 border ${
+                isClassSpotlighted ? "z-50 relative ring-1 ring-[#E8A33D]" : "relative"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-[#E8A33D]" />
+                  <p className="text-xs font-mono font-bold tracking-[0.12em] text-[#E8A33D]">
+                    WHICH CLASS WORKS FOR YOU?
+                  </p>
+                </div>
+                {isClassSpotlighted && (
+                  <span className="rounded-full bg-[#E8A33D] text-black px-2 py-0.5 text-[9px] font-mono font-extrabold uppercase">
+                    Select class
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-2.5 flex-wrap">
+                {CLASS_OPTIONS.map((cls) => (
+                  <button
+                    key={cls}
+                    type="button"
+                    onClick={() => handleClassChange(cls)}
+                    className="rounded-xl border border-[#E8A33D]/60 bg-[#080808] px-4 py-2.5 text-sm font-bold text-white min-h-[44px] hover:border-[#E8A33D] hover:shadow-[0_0_12px_rgba(232,163,61,0.4)] transition active:scale-[0.97]"
+                  >
+                    {cls}
+                  </button>
+                ))}
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Unknown route fallback */}
       {result && !result.routeFound && (
