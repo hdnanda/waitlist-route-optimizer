@@ -84,6 +84,7 @@ export default function HomePage() {
   const [inputError, setInputError] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [voiceLang, setVoiceLang] = useState<"en-IN" | "hi-IN">("en-IN");
   const [showSessionNotice, setShowSessionNotice] = useState(false);
   const recognitionRef = useRef<unknown>(null);
 
@@ -167,7 +168,7 @@ export default function HomePage() {
     const independentVowels: Record<string, string> = {
       "अ": "a", "आ": "aa", "इ": "i", "ई": "ee", "उ": "u", "ऊ": "oo",
       "ए": "e", "ऐ": "ai", "ओ": "o", "औ": "au", "ऋ": "ri",
-      "अं": "an", "अः": "ah"
+      "अं": "an", "अः": "ah", "ऑ": "o", "ऍ": "e"
     };
 
     const matras: Record<string, string> = {
@@ -241,6 +242,10 @@ export default function HomePage() {
     }
 
     return out
+      .replace(/\baaee\b/gi, "I")
+      .replace(/\bvant\b/gi, "want")
+      .replace(/\btu\b/gi, "to")
+      .replace(/\bphrom\b/gi, "from")
       .replace(/\bse\b/gi, "se")
       .replace(/\bko\b/gi, "ko")
       .replace(/\btak\b/gi, "tak")
@@ -279,12 +284,13 @@ export default function HomePage() {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognition = new SR() as any;
-    recognition.lang = "hi-IN";
+    // Default to en-IN for crystal-clear English + Indian accent/city recognition
+    recognition.lang = voiceLang;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
-      console.log("%c🎙️ [Speech-to-Text] Microphone active. Listening for Hindi/English speech...", "color: #E8A33D; font-weight: bold;");
+      console.log(`%c🎙️ [Speech-to-Text] Microphone active. Listening in [${voiceLang}] mode...`, "color: #E8A33D; font-weight: bold;");
       setListening(true);
     };
 
@@ -293,21 +299,23 @@ export default function HomePage() {
       const rawTranscript = (e.results?.[0]?.[0]?.transcript ?? "") as string;
       const confidence = e.results?.[0]?.[0]?.confidence;
 
-      // Transliterate any Devanagari to Roman Hinglish
-      const hinglish = devanagariToHinglish(rawTranscript);
+      // Only transliterate if the speech output contains Devanagari script characters
+      const hasDevanagari = /[\u0900-\u097F]/.test(rawTranscript);
+      const cleanPrompt = hasDevanagari ? devanagariToHinglish(rawTranscript) : rawTranscript.trim();
 
       console.group("%c🎙️ [Speech-to-Text] Voice Input Captured", "color: #E8A33D; font-size: 13px; font-weight: bold;");
+      console.log("%cLanguage Mode:", "color: #a855f7; font-weight: bold;", voiceLang);
       console.log("%cRaw Speech-to-Text (STT) Transcript:", "color: #f59e0b; font-weight: bold;", rawTranscript);
-      console.log("%cConverted Hinglish Prompt:", "color: #10b981; font-weight: bold;", hinglish);
+      console.log("%cProcessed Prompt:", "color: #10b981; font-weight: bold;", cleanPrompt);
       if (confidence !== undefined) {
         console.log("Speech Confidence Score:", `${Math.round(confidence * 100)}%`);
       }
-      console.log("%c🚀 Sending Prompt to Parser:", "color: #38bdf8; font-weight: bold;", hinglish);
+      console.log("%c🚀 Sending Prompt to Parser:", "color: #38bdf8; font-weight: bold;", cleanPrompt);
       console.groupEnd();
 
-      setInput(hinglish);
+      setInput(cleanPrompt);
       setListening(false);
-      void handleSearch(hinglish);
+      void handleSearch(cleanPrompt);
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -464,9 +472,37 @@ export default function HomePage() {
                   className="bg-transparent text-[15px] text-white placeholder:text-slate-500 outline-none w-full pr-14 resize-none leading-relaxed h-[75px]"
                 />
                 <div className="flex items-center justify-between pt-3.5 border-t border-white/5 mt-2">
-                  <span className="text-xs font-mono text-slate-500">
-                    Hindi · English · Hinglish
-                  </span>
+                  {/* Language Mode Toggle */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono text-slate-500 mr-1 hidden sm:inline">
+                      SPEECH:
+                    </span>
+                    <div className="flex items-center rounded-lg bg-[#111111] p-0.5 border border-white/10 text-[11px] font-mono">
+                      <button
+                        type="button"
+                        onClick={() => setVoiceLang("en-IN")}
+                        className={`px-2 py-1 rounded-md transition-all ${
+                          voiceLang === "en-IN"
+                            ? "bg-[#E8A33D] text-black font-bold shadow-[0_0_8px_rgba(232,163,61,0.5)]"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        🇮🇳 EN (India)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVoiceLang("hi-IN")}
+                        className={`px-2 py-1 rounded-md transition-all ${
+                          voiceLang === "hi-IN"
+                            ? "bg-[#E8A33D] text-black font-bold shadow-[0_0_8px_rgba(232,163,61,0.5)]"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        हिंदी
+                      </button>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={toggleVoice}
@@ -485,7 +521,9 @@ export default function HomePage() {
               {listening && (
                 <p className="mt-2.5 text-xs text-[#E8A33D] animate-pulse font-mono flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-[#E8A33D] animate-ping" />
-                  LISTENING — बोलिए...
+                  {voiceLang === "en-IN"
+                    ? "LISTENING IN ENGLISH (INDIA) — Speak now..."
+                    : "LISTENING IN HINDI — बोलिए..."}
                 </p>
               )}
               {inputError && <p className="mt-2.5 text-xs text-[#E8A33D] font-mono">{inputError}</p>}
