@@ -8,8 +8,10 @@
   --bg: #000000;
   --panel: #080808;
   --panel-2: #121212;
-  --paper: #0A0A0A;
-  --paper-2: #141414;
+  --paper: #F7EFE0;       /* main ticket card background — warm cream */
+  --paper-dim: #EDE3CE;   /* "why this option" section background — slightly darker cream for separation */
+  --text-on-paper: #1C2B4A;      /* primary text on the ticket card — dark indigo, not white */
+  --text-on-paper-dim: #5B5342;  /* secondary/meta text on the ticket card */
   --marigold: #E8A33D;
   --marigold-2: #C48630;
   --vermilion: #C0432E;
@@ -38,6 +40,41 @@ body {
   -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
+}
+
+/* ── Ticket Stub Styling (Warm Cream Lifted Card) ────────────────────────── */
+.ticket-card {
+  background: var(--paper);
+  color: var(--text-on-paper);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28); /* keeps it feeling lifted off the dark page behind it */
+}
+
+.ticket-card .route-title,
+.ticket-card .train-name,
+.ticket-card .leg-detail {
+  color: var(--text-on-paper);
+}
+
+.ticket-card .meta-text {
+  color: var(--text-on-paper-dim);
+}
+
+.ticket-card .why-section {
+  background: var(--paper-dim);
+  color: var(--text-on-paper);
+}
+
+.ticket-card .why-label {
+  color: var(--text-on-paper-dim);
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+}
+
+.ticket-card .book-button {
+  background: #151B2E; /* the deep indigo page background color, used here as the button — dark button punching through the light card */
+  color: #F3EDE0;
 }
 
 /* OLED Luxury Amber Glow helpers */
