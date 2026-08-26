@@ -112,15 +112,16 @@ export default function TicketCard({ option, onBook, index = 0 }: TicketCardProp
           {option.why}
         </p>
 
-        {/* Book Button (Dark Indigo Button punching through the Light Card) */}
+        {/* Book Button (Dark Indigo Button punching through the Light Card / Muted Gray when Waitlisted) */}
         <button
           type="button"
           onClick={canBook ? onBook : undefined}
           disabled={!canBook}
-          className={`book-button mt-4 flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] ${
+          aria-disabled={!canBook}
+          className={`book-button mt-4 flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all ${
             canBook
-              ? "bg-[#151B2E] text-[#F3EDE0] hover:bg-[#202945] shadow-[0_4px_14px_rgba(21,27,46,0.3)] cursor-pointer"
-              : "bg-[#D6C8B0] text-[#5B5342] cursor-not-allowed border border-[#C4B59B]"
+              ? "bg-[#151B2E] text-[#F3EDE0] hover:bg-[#202945] shadow-[0_4px_14px_rgba(21,27,46,0.3)] cursor-pointer active:scale-[0.98]"
+              : "bg-[#DDD2BA] text-[#8C7F69] border border-dashed border-[#C8BC9F] cursor-not-allowed opacity-60 pointer-events-none select-none"
           }`}
         >
           {canBook ? (
