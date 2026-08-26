@@ -355,7 +355,7 @@ export default function HomePage() {
                 Waitlist Route Optimizer
               </p>
               <p className="mt-1 text-xs lg:text-sm text-slate-400 leading-relaxed">
-                बुक करें जब टिकट मिले — हम रास्ता निकालते हैं
+                Getting you home, even when the direct train won&apos;t
               </p>
               <p className="mt-2 text-xs lg:text-sm text-slate-400/90 leading-relaxed hidden lg:block">
                 Stuck on a train waitlist? We look beyond the direct queue to discover confirmed split-ticket quotas and alternate station connections.
