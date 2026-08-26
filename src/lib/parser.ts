@@ -28,10 +28,29 @@ export function setCachedIntent(input: string, intent: ParsedIntent): void {
 
 // Class aliases — sorted longest-first so "sleeper class" matches before "sleeper"
 const CLASS_ALIASES: [string, TrainClass][] = [
-  ["sleeper class", "SL"], ["स्लीपर क्लास", "SL"], ["first class", "1A"], ["second ac", "2A"], ["third ac", "3A"],
-  ["ac first", "1A"], ["ac 2", "2A"], ["ac 3", "3A"], ["2 tier", "2A"], ["3 tier", "3A"], ["2 tire", "2A"], ["3 tire", "3A"],
-  ["फर्स्ट एसी", "1A"], ["सेकंड एसी", "2A"], ["थर्ड एसी", "3A"], ["स्लीपर", "SL"], ["slipar", "SL"], ["sleepar", "SL"],
-  ["sleeper", "SL"], ["1a", "1A"], ["2a", "2A"], ["3a", "3A"], ["sl", "SL"],
+  // 1A (First AC)
+  ["first ac coach", "1A"], ["first coach", "1A"], ["1st coach", "1A"], ["first class", "1A"], ["1st class", "1A"],
+  ["first tier", "1A"], ["1st tier", "1A"], ["first ac", "1A"], ["1st ac", "1A"], ["one ac", "1A"], ["1 ac", "1A"],
+  ["1ac", "1A"], ["ac 1", "1A"], ["ac first", "1A"], ["1 am", "1A"], ["1am", "1A"], ["one a", "1A"], ["1 a", "1A"], ["1a", "1A"],
+  ["फर्स्ट एसी", "1A"], ["फर्स्ट क्लास", "1A"],
+
+  // 2A (Second AC)
+  ["second ac coach", "2A"], ["second coach", "2A"], ["2nd coach", "2A"], ["second class ac", "2A"], ["second class", "2A"],
+  ["second tier", "2A"], ["2nd tier", "2A"], ["two tier", "2A"], ["2 tier", "2A"], ["2 tire", "2A"], ["second ac", "2A"],
+  ["2nd ac", "2A"], ["two ac", "2A"], ["2 ac", "2A"], ["2ac", "2A"], ["ac 2", "2A"], ["2 am", "2A"], ["2am", "2A"],
+  ["two a", "2A"], ["2 a", "2A"], ["2a", "2A"],
+  ["सेकंड एसी", "2A"], ["सेकंड क्लास", "2A"],
+
+  // 3A (Third AC)
+  ["third ac coach", "3A"], ["third coach", "3A"], ["3rd coach", "3A"], ["third tier", "3A"], ["3rd tier", "3A"],
+  ["three tier", "3A"], ["3 tier", "3A"], ["3 tire", "3A"], ["third ac", "3A"], ["3rd ac", "3A"], ["three ac", "3A"],
+  ["3 ac", "3A"], ["3ac", "3A"], ["ac 3", "3A"], ["3 am", "3A"], ["3am", "3A"], ["three a", "3A"], ["3 a", "3A"], ["3a", "3A"],
+  ["economy ac", "3A"], ["3e", "3A"], ["3 e", "3A"],
+  ["थर्ड एसी", "3A"],
+
+  // SL (Sleeper)
+  ["sleeper coach", "SL"], ["sleeper class", "SL"], ["स्लीपर क्लास", "SL"], ["non ac coach", "SL"], ["non ac", "SL"],
+  ["non-ac", "SL"], ["स्लीपर", "SL"], ["slipar", "SL"], ["sleepar", "SL"], ["sleeper", "SL"], ["sl", "SL"],
 ];
 
 // ── Sentiment & Comfort Intent Rules for Seat Class ─────────────────────────
@@ -629,8 +648,20 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
     origin,
     destination,
     date,
-    passengerNote: /मां|माँ|mother|maa|papa|पिताजी|पापा|father/i.test(text)
-      ? /papa|पापा|पिताजी|father/i.test(text) ? "For father" : "For mother"
+    passengerNote: /grandfather|grandpa|dada|dadaji|nana|nanaji|दादा|नाना/i.test(text)
+      ? "For grandfather"
+      : /grandmother|grandma|dadi|dadiji|nani|naniji|दादी|नानी/i.test(text)
+      ? "For grandmother"
+      : /papa|पिताजी|पापा|father|dad/i.test(text)
+      ? "For father"
+      : /मां|माँ|mother|maa|mom|mataji|माताजी/i.test(text)
+      ? "For mother"
+      : /sister|didi|behan|दीदी|बहन/i.test(text)
+      ? "For sister"
+      : /brother|bhai|bhaiya|भाई|भैया/i.test(text)
+      ? "For brother"
+      : /family|परिवार/i.test(text)
+      ? "For family"
       : null,
     class: trainClass,
     confidence: "high",
