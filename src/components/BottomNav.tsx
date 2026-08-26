@@ -13,7 +13,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto bg-black/95 backdrop-blur-md border-t border-[#E8A33D]/25 py-2.5 px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.8)]">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-black/95 backdrop-blur-md border-t border-[#E8A33D]/25 py-2.5 px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.8)]">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);

@@ -15,6 +15,9 @@ import {
   Heart,
   Ticket,
   ShieldCheck,
+  Zap,
+  Route,
+  CheckCircle2,
 } from "lucide-react";
 import { parseIntent } from "@/lib/parser";
 import { useApp } from "@/lib/context";
@@ -60,7 +63,7 @@ const EXAMPLE_CHIPS = [
 
 function GlowingSectionDivider({ title }: { title: string }) {
   return (
-    <div className="flex items-center my-5">
+    <div className="flex items-center my-4">
       <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#E8A33D]/40 to-[#E8A33D]/80" />
       <div className="flex items-center gap-1.5 px-3">
         <Sparkles className="h-2.5 w-2.5 text-[#E8A33D] animate-pulse" />
@@ -114,8 +117,6 @@ export default function HomePage() {
   );
 
   // ── Devanagari → Hinglish transliteration ────────────────────────────────
-  // Converts Devanagari speech-to-text output phonetically to Roman Hinglish
-  // so Hindi queries become clean Hinglish for the parser (e.g. "दिल्ली से पटना" → "dilli se patna").
   const devanagariToHinglish = (text: string): string => {
     const consonants: Record<string, string> = {
       "क": "k", "ख": "kh", "ग": "g", "घ": "gh", "ङ": "ng",
@@ -147,7 +148,7 @@ export default function HomePage() {
       const ch = text[i];
       const nextCh = text[i + 1] || "";
       
-      // Check nukta combinations (e.g. क + ़ = क़)
+      // Check nukta combinations
       if (nextCh === "़") {
         const combined = ch + nextCh;
         const base = consonants[combined] || consonants[ch] || ch;
@@ -183,7 +184,6 @@ export default function HomePage() {
           out += base + "ah";
           i += 2;
         } else {
-          // Word-final consonants in Hindi drop the inherent 'a'
           const afterConsonant = text[i + 1];
           const isWordEnd = !afterConsonant || /\s|[.,!?]/.test(afterConsonant);
           out += base + (isWordEnd ? "" : "a");
@@ -291,144 +291,208 @@ export default function HomePage() {
     recognition.start();
   };
 
-
   return (
     <motion.main
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="relative flex min-h-screen flex-col px-5 pb-16 pt-6 bg-black"
+      className="relative flex min-h-screen flex-col px-5 pb-16 pt-4 lg:pt-8 bg-transparent w-full"
     >
-      {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <TrainFront className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_8px_rgba(232,163,61,0.6)]" />
-          <span className="font-mono text-xs tracking-widest text-[#E8A33D] uppercase font-bold">
-            INDIAN RAIL ROUTES
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => router.push("/tickets")}
-          aria-label="Menu"
-          className="h-8 w-8 rounded-full border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] flex items-center justify-center bg-black hover:bg-[#0A0A0A] transition-all duration-200"
-        >
-          <Menu className="h-4 w-4 text-[#E8A33D]" />
-        </button>
-      </div>
-
-      {/* ── Main Title Block ────────────────────────────────────────────────── */}
-      <header className="mt-0.5">
-        <h1 className="font-serif text-4xl font-extrabold text-white tracking-tight leading-tight">
-          घर वापसी
-        </h1>
-        <div className="my-2 h-[1px] w-full bg-gradient-to-r from-[#E8A33D]/80 via-[#E8A33D]/30 to-transparent" />
-        <p className="text-sm text-slate-200 font-medium">Waitlist Route Optimizer</p>
-        <p className="mt-0.5 text-xs text-slate-400">
-          बुक करें जब टिकट मिले — हम रास्ता निकालते हैं
-        </p>
-      </header>
-
-      {/* ── "Ask Anything" Search Input Area (NOW PLACED ON TOP) ───────────── */}
-      <section className="mt-1">
-        <GlowingSectionDivider title="ASK ANYTHING" />
-        <div className="bg-[#050505] rounded-2xl p-4 border border-[#E8A33D]/90 shadow-[0_0_14px_rgba(232,163,61,0.45)] relative flex flex-col justify-between min-h-[120px] transition-all duration-200 hover:shadow-[0_0_20px_rgba(232,163,61,0.65)]">
-          <textarea
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              setInputError("");
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void handleSearch();
-              }
-            }}
-            placeholder="e.g. Maa ko Chhath ke liye Patna bhejna hai, 6 November ko"
-            className="bg-transparent text-sm text-white placeholder:text-slate-500 outline-none w-full pr-14 resize-none leading-relaxed h-20"
-          />
-          <div className="flex items-center justify-between pt-2 border-t border-white/5 mt-1">
-            <span className="text-[10px] font-mono text-slate-500">
-              Hindi · English · Hinglish
+      {/* ── Responsive Wrapper: Centered mobile max-w-[480px], expanding to max-w-6xl 2-column on desktop ── */}
+      <div className="w-full max-w-[480px] lg:max-w-6xl mx-auto">
+        
+        {/* Mobile top pill (hidden on md+ where TopNav exists) */}
+        <div className="flex md:hidden items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <TrainFront className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_8px_rgba(232,163,61,0.6)]" />
+            <span className="font-mono text-xs tracking-widest text-[#E8A33D] uppercase font-bold">
+              INDIAN RAIL ROUTES
             </span>
-            <button
-              type="button"
-              onClick={toggleVoice}
-              aria-label={listening ? "Stop voice" : "Start voice"}
-              className={`h-9 w-9 rounded-full border border-[#E8A33D]/90 shadow-[0_0_12px_rgba(232,163,61,0.5)] flex items-center justify-center transition-all ${
-                listening
-                  ? "bg-[#C0432E] text-white animate-pulse"
-                  : "bg-black text-[#E8A33D] hover:bg-[#121212] hover:scale-105"
-              }`}
-            >
-              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </button>
           </div>
-        </div>
-
-        {listening && (
-          <p className="mt-2 text-xs text-[#E8A33D] animate-pulse font-mono flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#E8A33D] animate-ping" />
-            LISTENING — बोलिए...
-          </p>
-        )}
-        {inputError && <p className="mt-2 text-xs text-[#E8A33D] font-mono">{inputError}</p>}
-
-        {/* Search CTA Button */}
-        <div className="mt-4">
           <button
             type="button"
-            onClick={() => void handleSearch()}
-            disabled={loading || !input.trim()}
-            className="flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-[#E8A33D] py-3.5 text-sm font-extrabold text-black shadow-[0_0_18px_rgba(232,163,61,0.5)] transition-all hover:bg-[#F0B250] hover:shadow-[0_0_24px_rgba(232,163,61,0.7)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            onClick={() => router.push("/tickets")}
+            aria-label="Menu"
+            className="h-8 w-8 rounded-full border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] flex items-center justify-center bg-black hover:bg-[#0A0A0A] transition-all duration-200"
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin text-black" /> Parsing...
-              </>
-            ) : (
-              <>
-                Find confirmed journey <ArrowRight className="h-4 w-4 stroke-[2.5]" />
-              </>
-            )}
+            <Menu className="h-4 w-4 text-[#E8A33D]" />
           </button>
-          <p className="mt-2 text-center text-[10px] text-slate-500 font-mono">
-            We look beyond direct waitlists to find the best route.
-          </p>
         </div>
-      </section>
 
-      {/* ── Quick Start 2x3 Grid (NOW BELOW SEARCH) ────────────────────────── */}
-      <section className="mt-2">
-        <GlowingSectionDivider title="QUICK START — TAP TO TRY" />
-        <div className="grid grid-cols-2 gap-3 my-1">
-          {EXAMPLE_CHIPS.map((chip) => {
-            const Icon = chip.icon;
-            return (
-              <button
-                key={chip.label}
-                type="button"
-                onClick={() => void handleSearch(chip.input)}
-                disabled={loading}
-                className="bg-[#050505] hover:bg-[#0A0A0A] rounded-2xl p-3.5 border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] hover:shadow-[0_0_18px_rgba(232,163,61,0.65),inset_0_0_10px_rgba(232,163,61,0.15)] flex flex-col justify-between cursor-pointer text-left transition-all duration-200 min-h-[92px] active:scale-[0.98]"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <Icon className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_6px_rgba(232,163,61,0.5)]" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#E8A33D]/40" />
+        {/* ── Main Layout: Single column on mobile/tablet, 2-column grid at lg: ── */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-12 lg:items-start">
+          
+          {/* ── Left Column (lg:col-span-5): Branding & 3-Step Explainer ─────────── */}
+          <div className="lg:col-span-5 flex flex-col justify-between">
+            <header className="mt-0.5">
+              <h1 className="font-serif text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
+                घर वापसी
+              </h1>
+              <div className="my-2.5 h-[1px] w-full bg-gradient-to-r from-[#E8A33D]/80 via-[#E8A33D]/30 to-transparent" />
+              <p className="text-base lg:text-lg text-slate-200 font-semibold">
+                Waitlist Route Optimizer
+              </p>
+              <p className="mt-1 text-xs lg:text-sm text-slate-400 leading-relaxed">
+                बुक करें जब टिकट मिले — हम रास्ता निकालते हैं
+              </p>
+              <p className="mt-2 text-xs lg:text-sm text-slate-400/90 leading-relaxed hidden lg:block">
+                Stuck on a train waitlist? We look beyond the direct queue to discover confirmed split-ticket quotas and alternate station connections.
+              </p>
+            </header>
+
+            {/* ── Desktop-Only "How it works" 3-step mini explainer ────────── */}
+            <div className="hidden lg:flex flex-col gap-4 mt-8 pt-6 border-t border-white/10">
+              <p className="text-xs font-mono font-bold tracking-[0.14em] text-[#E8A33D] uppercase flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-[#E8A33D]" />
+                How the Optimizer Works
+              </p>
+
+              <div className="space-y-3.5">
+                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#080808]/80 p-3.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E8A33D]/40 bg-[#E8A33D]/10">
+                    <Mic className="h-4 w-4 text-[#E8A33D]" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">1. Speak or type naturally</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                      Enter in Hindi, English, or Hinglish via voice or text.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-sm text-white leading-tight mt-1.5">
-                    {chip.label}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5 leading-tight">
-                    {chip.sublabel}
-                  </p>
+
+                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#080808]/80 p-3.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#3F8F5F]/40 bg-[#3F8F5F]/10">
+                    <Route className="h-4 w-4 text-[#3F8F5F]" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">2. Multi-quota split search</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                      Explores intermediate PRS quotas, layover timing, and adjacent junctions.
+                    </p>
+                  </div>
                 </div>
-              </button>
-            );
-          })}
+
+                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#080808]/80 p-3.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#818CF8]/40 bg-[#818CF8]/10">
+                    <CheckCircle2 className="h-4 w-4 text-[#818CF8]" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">3. Guaranteed confirmed booking</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                      Book confirmed split tickets across 2 PNRs with unified tracking.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right Column (lg:col-span-7): Intent Box & Quick Start Chips ───── */}
+          <div className="lg:col-span-7 mt-4 lg:mt-0 lg:max-w-[560px]">
+            {/* "Ask Anything" Search Input Area */}
+            <section className="mt-1">
+              <GlowingSectionDivider title="ASK ANYTHING" />
+              <div className="bg-[#050505] rounded-2xl p-4 border border-[#E8A33D]/90 shadow-[0_0_14px_rgba(232,163,61,0.45)] relative flex flex-col justify-between min-h-[120px] transition-all duration-200 hover:shadow-[0_0_20px_rgba(232,163,61,0.65)]">
+                <textarea
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    setInputError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleSearch();
+                    }
+                  }}
+                  placeholder="e.g. Maa ko Chhath ke liye Patna bhejna hai, 6 November ko"
+                  className="bg-transparent text-sm text-white placeholder:text-slate-500 outline-none w-full pr-14 resize-none leading-relaxed h-20"
+                />
+                <div className="flex items-center justify-between pt-2 border-t border-white/5 mt-1">
+                  <span className="text-[10px] font-mono text-slate-500">
+                    Hindi · English · Hinglish
+                  </span>
+                  <button
+                    type="button"
+                    onClick={toggleVoice}
+                    aria-label={listening ? "Stop voice" : "Start voice"}
+                    className={`h-9 w-9 rounded-full border border-[#E8A33D]/90 shadow-[0_0_12px_rgba(232,163,61,0.5)] flex items-center justify-center transition-all ${
+                      listening
+                        ? "bg-[#C0432E] text-white animate-pulse"
+                        : "bg-black text-[#E8A33D] hover:bg-[#121212] hover:scale-105"
+                    }`}
+                  >
+                    {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {listening && (
+                <p className="mt-2 text-xs text-[#E8A33D] animate-pulse font-mono flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[#E8A33D] animate-ping" />
+                  LISTENING — बोलिए...
+                </p>
+              )}
+              {inputError && <p className="mt-2 text-xs text-[#E8A33D] font-mono">{inputError}</p>}
+
+              {/* Search CTA Button */}
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => void handleSearch()}
+                  disabled={loading || !input.trim()}
+                  className="flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-[#E8A33D] py-3.5 text-sm font-extrabold text-black shadow-[0_0_18px_rgba(232,163,61,0.5)] transition-all hover:bg-[#F0B250] hover:shadow-[0_0_24px_rgba(232,163,61,0.7)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-black" /> Parsing...
+                    </>
+                  ) : (
+                    <>
+                      Find confirmed journey <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+                    </>
+                  )}
+                </button>
+                <p className="mt-2 text-center text-[10px] text-slate-500 font-mono">
+                  We look beyond direct waitlists to find the best route.
+                </p>
+              </div>
+            </section>
+
+            {/* ── Quick Start 2x3 Grid (Below Search) ────────────────────────── */}
+            <section className="mt-3">
+              <GlowingSectionDivider title="QUICK START — TAP TO TRY" />
+              <div className="grid grid-cols-2 gap-3 my-1">
+                {EXAMPLE_CHIPS.map((chip) => {
+                  const Icon = chip.icon;
+                  return (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => void handleSearch(chip.input)}
+                      disabled={loading}
+                      className="bg-[#050505] hover:bg-[#0A0A0A] rounded-2xl p-3.5 border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] hover:shadow-[0_0_18px_rgba(232,163,61,0.65),inset_0_0_10px_rgba(232,163,61,0.15)] flex flex-col justify-between cursor-pointer text-left transition-all duration-200 min-h-[92px] active:scale-[0.98]"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <Icon className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_6px_rgba(232,163,61,0.5)]" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#E8A33D]/40" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm text-white leading-tight mt-1.5">
+                          {chip.label}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5 leading-tight">
+                          {chip.sublabel}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+
         </div>
-      </section>
+      </div>
 
       {/* ── Loading Overlay ─────────────────────────────────────────────────── */}
       <AnimatePresence>

@@ -132,24 +132,25 @@ export default function LoginPage() {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.45, ease: "easeOut" }}
-      className="relative flex min-h-screen flex-col overflow-y-auto px-5 pb-16 pt-7 bg-gradient-to-b from-[#FFFFFF] via-[#F8F9FA] to-[#F1F3F5] text-slate-900"
+      className="relative flex min-h-screen flex-col overflow-y-auto px-5 pb-16 pt-7 bg-gradient-to-b from-[#FFFFFF] via-[#F8F9FA] to-[#F1F3F5] text-slate-900 w-full"
     >
       {/* Gentle ambient warm glow orb */}
       <div className="pointer-events-none fixed -top-16 -right-16 h-60 w-60 rounded-full bg-[#E8A33D]/15 blur-3xl" />
       <div className="pointer-events-none fixed -bottom-20 -left-16 h-60 w-60 rounded-full bg-[#E8A33D]/10 blur-3xl" />
 
-      {step !== "success" && (
-        <button
-          onClick={() => {
-            if (step === "signup") setStep("mobile");
-            else if (step === "otp") setStep(isNewUser ? "signup" : "mobile");
-            else router.back();
-          }}
-          className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition mb-6 w-fit"
-        >
-          <ArrowLeft className="h-4 w-4 text-[#D97706]" /> Back
-        </button>
-      )}
+      <div className="w-full max-w-[440px] mx-auto flex-1 flex flex-col justify-center">
+        {step !== "success" && (
+          <button
+            onClick={() => {
+              if (step === "signup") setStep("mobile");
+              else if (step === "otp") setStep(isNewUser ? "signup" : "mobile");
+              else router.back();
+            }}
+            className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition mb-6 w-fit"
+          >
+            <ArrowLeft className="h-4 w-4 text-[#D97706]" /> Back
+          </button>
+        )}
 
       {/* Brand Header */}
       {step !== "success" && (
@@ -425,6 +426,7 @@ export default function LoginPage() {
           Encrypted authentication • Demo mode
         </p>
       )}
+      </div>
     </motion.main>
   );
 }
