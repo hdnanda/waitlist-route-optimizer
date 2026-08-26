@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Train, ArrowRight, UserCheck } from "lucide-react";
 import { useApp } from "@/lib/context";
+import BookingBreadcrumbs from "@/components/BookingBreadcrumbs";
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function ReviewPage() {
     <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       className="relative min-h-screen px-5 pb-16 pt-4 lg:pt-8 bg-transparent text-white w-full">
       <div className="w-full max-w-[480px] mx-auto">
+        <BookingBreadcrumbs currentStep="review" />
         <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition mb-6">
           <ArrowLeft className="h-4 w-4 text-[#E8A33D]" /> Back
         </button>

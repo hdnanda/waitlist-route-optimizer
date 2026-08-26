@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { parseIntent } from "@/lib/parser";
 import { useApp } from "@/lib/context";
+import FaqSection from "@/components/FaqSection";
 
 const EXAMPLE_CHIPS = [
   {
@@ -534,6 +535,9 @@ export default function HomePage() {
                 })}
               </div>
             </section>
+
+            {/* ── Frequently Asked Questions (Trust & Legality) ─────────────── */}
+            <FaqSection />
           </div>
 
         </div>

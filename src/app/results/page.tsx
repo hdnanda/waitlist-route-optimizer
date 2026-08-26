@@ -16,6 +16,7 @@ import { getRankedOptions } from "@/lib/engine";
 import { useApp } from "@/lib/context";
 import TicketCard from "@/components/TicketCard";
 import CustomDatePickerModal from "@/components/CustomDatePickerModal";
+import BookingBreadcrumbs from "@/components/BookingBreadcrumbs";
 import type { TrainClass, ReasonedOption, RouteResult } from "@/lib/types";
 
 const CLASS_OPTIONS: TrainClass[] = ["SL", "3A", "2A", "1A"];
@@ -250,6 +251,9 @@ export default function ResultsPage() {
       {/* ── Responsive Main Container: max-w-[480px] on mobile, expanding to max-w-7xl on desktop ── */}
       <div className="w-full max-w-[480px] md:max-w-2xl lg:max-w-7xl mx-auto">
         
+        {/* Progress Breadcrumbs */}
+        <BookingBreadcrumbs currentStep="results" />
+
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => router.push("/")} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition">

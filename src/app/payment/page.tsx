@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Lock, Loader2, RotateCw } from "lucide-react";
 import { useApp } from "@/lib/context";
 import OtpNotification from "@/components/OtpNotification";
+import BookingBreadcrumbs from "@/components/BookingBreadcrumbs";
 import type { StoredTicket } from "@/lib/types";
 
 function genPNR() {
@@ -153,6 +154,7 @@ export default function PaymentPage() {
       />
 
       <div className="w-full max-w-[480px] mx-auto">
+        <BookingBreadcrumbs currentStep="payment" />
         <button
           onClick={() => router.back()}
           className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition mb-6"

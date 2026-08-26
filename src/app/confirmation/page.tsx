@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Share2, ArrowRight } from "lucide-react";
 import { useApp } from "@/lib/context";
+import BookingBreadcrumbs from "@/components/BookingBreadcrumbs";
 
 export default function ConfirmationPage() {
   const router = useRouter();
@@ -24,6 +25,8 @@ export default function ConfirmationPage() {
     <motion.main initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
       className="relative flex min-h-screen flex-col items-center px-5 pb-16 pt-6 lg:pt-10 bg-transparent text-white w-full">
       <div className="w-full max-w-[480px] mx-auto flex flex-col items-center">
+        <BookingBreadcrumbs currentStep="confirmation" />
+        
         {/* Success icon */}
         <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1, type: "spring", stiffness: 260, damping: 20 }}
           className="flex h-24 w-24 items-center justify-center rounded-full bg-[#3F8F5F]/15 border border-[#3F8F5F]/60 shadow-[0_0_24px_rgba(63,143,95,0.45)]">
