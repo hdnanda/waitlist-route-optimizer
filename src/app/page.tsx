@@ -105,62 +105,116 @@ export default function HomePage() {
   );
 
   // ── Devanagari → Hinglish transliteration ────────────────────────────────
-  // Maps Devanagari Unicode chars to their closest Roman phonetic equivalent.
-  // This runs client-side, zero dependencies, so Hindi mic input becomes
-  // parser-readable Hinglish (e.g. "मुंबई से दिल्ली" → "Mumbai se Dilli").
+  // Converts Devanagari speech-to-text output phonetically to Roman Hinglish
+  // so Hindi queries become clean Hinglish for the parser (e.g. "दिल्ली से पटना" → "dilli se patna").
   const devanagariToHinglish = (text: string): string => {
-    const map: Record<string, string> = {
-      // Independent vowels
-      "अ": "a", "आ": "aa", "इ": "i", "ई": "ee", "उ": "u", "ऊ": "oo",
-      "ए": "e", "ऐ": "ai", "ओ": "o", "औ": "au", "ऋ": "ri",
-      "अं": "an", "अः": "ah",
-      // Vowel matras (dependent vowel signs)
-      "ा": "a", "ि": "i", "ी": "ee", "ु": "u", "ू": "oo",
-      "े": "e", "ै": "ai", "ो": "o", "ौ": "au", "ृ": "ri",
-      "ं": "n", "ः": "h", "ँ": "n", "़": "",
-      // Halant (virama — suppresses vowel)
-      "्": "",
-      // Consonants
-      "क": "ka", "ख": "kha", "ग": "ga", "घ": "gha", "ङ": "nga",
-      "च": "cha", "छ": "chha", "ज": "ja", "झ": "jha", "ञ": "nya",
-      "ट": "ta", "ठ": "tha", "ड": "da", "ढ": "dha", "ण": "na",
-      "त": "ta", "थ": "tha", "द": "da", "ध": "dha", "न": "na",
-      "प": "pa", "फ": "pha", "ब": "ba", "भ": "bha", "म": "ma",
-      "य": "ya", "र": "ra", "ल": "la", "व": "va",
-      "श": "sha", "ष": "sha", "स": "sa", "ह": "ha",
-      "क्ष": "ksha", "त्र": "tra", "ज्ञ": "gya",
-      // Nukta (dotted) variants
-      "क़": "qa", "ख़": "kha", "ग़": "ga", "ज़": "za", "ड़": "da",
-      "ढ़": "dha", "फ़": "fa", "य़": "ya",
-      // Digits
-      "०": "0", "१": "1", "२": "2", "३": "3", "४": "4",
-      "५": "5", "६": "6", "७": "7", "८": "8", "९": "9",
+    const consonants: Record<string, string> = {
+      "क": "k", "ख": "kh", "ग": "g", "घ": "gh", "ङ": "ng",
+      "च": "ch", "छ": "chh", "ज": "j", "झ": "jh", "ञ": "ny",
+      "ट": "t", "ठ": "th", "ड": "d", "ढ": "dh", "ण": "n",
+      "त": "t", "थ": "th", "द": "d", "ध": "dh", "न": "n",
+      "प": "p", "फ": "ph", "ब": "b", "भ": "bh", "म": "m",
+      "य": "y", "र": "r", "ल": "l", "व": "v",
+      "श": "sh", "ष": "sh", "स": "s", "ह": "h",
+      "क्ष": "ksh", "त्र": "tr", "ज्ञ": "gy",
+      "क़": "q", "ख़": "kh", "ग़": "g", "ज़": "z", "ड़": "d", "ढ़": "dh", "फ़": "f"
     };
 
-    // Multi-char ligatures first, then single chars
-    const multiChar = ["क्ष", "त्र", "ज्ञ", "अं", "अः"];
-    let result = "";
+    const independentVowels: Record<string, string> = {
+      "अ": "a", "आ": "aa", "इ": "i", "ई": "ee", "उ": "u", "ऊ": "oo",
+      "ए": "e", "ऐ": "ai", "ओ": "o", "औ": "au", "ऋ": "ri",
+      "अं": "an", "अः": "ah"
+    };
+
+    const matras: Record<string, string> = {
+      "ा": "a", "ि": "i", "ी": "i", "ु": "u", "ू": "u",
+      "े": "e", "ै": "ai", "ो": "o", "ौ": "au", "ृ": "ri",
+      "ॅ": "e", "ॉ": "o"
+    };
+
+    let out = "";
     let i = 0;
     while (i < text.length) {
-      let matched = false;
-      for (const mc of multiChar) {
-        if (text.startsWith(mc, i)) {
-          result += map[mc] ?? mc;
-          i += mc.length;
-          matched = true;
-          break;
+      const ch = text[i];
+      const nextCh = text[i + 1] || "";
+      
+      // Check nukta combinations (e.g. क + ़ = क़)
+      if (nextCh === "़") {
+        const combined = ch + nextCh;
+        const base = consonants[combined] || consonants[ch] || ch;
+        const afterNukta = text[i + 2] || "";
+        if (matras[afterNukta]) {
+          out += base + matras[afterNukta];
+          i += 3;
+        } else if (afterNukta === "्") {
+          out += base;
+          i += 3;
+        } else {
+          out += base + "a";
+          i += 2;
         }
+        continue;
       }
-      if (!matched) {
-        const ch = text[i];
-        result += map[ch] ?? ch;
+
+      if (independentVowels[ch]) {
+        out += independentVowels[ch];
+        i++;
+      } else if (consonants[ch]) {
+        const base = consonants[ch];
+        if (matras[nextCh]) {
+          out += base + matras[nextCh];
+          i += 2;
+        } else if (nextCh === "्") {
+          out += base;
+          i += 2;
+        } else if (nextCh === "ं" || nextCh === "ँ") {
+          out += base + "an";
+          i += 2;
+        } else if (nextCh === "ः") {
+          out += base + "ah";
+          i += 2;
+        } else {
+          // Word-final consonants in Hindi drop the inherent 'a'
+          const afterConsonant = text[i + 1];
+          const isWordEnd = !afterConsonant || /\s|[.,!?]/.test(afterConsonant);
+          out += base + (isWordEnd ? "" : "a");
+          i++;
+        }
+      } else if (matras[ch]) {
+        out += matras[ch];
+        i++;
+      } else if (ch === "ं" || ch === "ँ") {
+        out += "n";
+        i++;
+      } else if (ch === "ः") {
+        out += "h";
+        i++;
+      } else if (ch === "्") {
+        i++;
+      } else {
+        out += ch;
         i++;
       }
     }
-    // Clean up: collapse repeated vowels that over-generate (e.g. "kaa" → "ka")
-    // but preserve intentional doubles like "aa", "ee", "oo"
-    return result
-      .replace(/([aeiou])\1{2,}/gi, "$1$1") // cap triples to doubles
+
+    return out
+      .replace(/\bse\b/gi, "se")
+      .replace(/\bko\b/gi, "ko")
+      .replace(/\btak\b/gi, "tak")
+      .replace(/\bke\s+liye\b/gi, "ke liye")
+      .replace(/\bnavanbar\b/gi, "November")
+      .replace(/\bdisanbar\b/gi, "December")
+      .replace(/\bjanavaree\b/gi, "January")
+      .replace(/\bfaravaree\b/gi, "February")
+      .replace(/\bmarch\b/gi, "March")
+      .replace(/\baprail\b/gi, "April")
+      .replace(/\bmaee\b/gi, "May")
+      .replace(/\bjoon\b/gi, "June")
+      .replace(/\bjulaaee\b/gi, "July")
+      .replace(/\bagast\b/gi, "August")
+      .replace(/\bsitanbar\b/gi, "September")
+      .replace(/\baktoobar\b/gi, "October")
+      .replace(/\bsleepar|slepar|slipar\b/gi, "sleeper")
       .replace(/\s+/g, " ")
       .trim();
   };
@@ -172,6 +226,7 @@ export default function HomePage() {
     const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!SR) {
       setInputError("Voice not supported on this browser.");
+      console.warn("[Speech-to-Text] SpeechRecognition API not supported on this browser.");
       return;
     }
     if (listening) {
@@ -181,27 +236,50 @@ export default function HomePage() {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognition = new SR() as any;
-    // hi-IN so speaker can speak Hindi; we transliterate to Hinglish ourselves
     recognition.lang = "hi-IN";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      console.log("%c🎙️ [Speech-to-Text] Microphone active. Listening for Hindi/English speech...", "color: #E8A33D; font-weight: bold;");
+      setListening(true);
+    };
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (e: any) => {
       const rawTranscript = (e.results?.[0]?.[0]?.transcript ?? "") as string;
-      // Transliterate any Devanagari to Roman Hinglish before parsing
+      const confidence = e.results?.[0]?.[0]?.confidence;
+
+      // Transliterate any Devanagari to Roman Hinglish
       const hinglish = devanagariToHinglish(rawTranscript);
+
+      console.group("%c🎙️ [Speech-to-Text] Voice Input Captured", "color: #E8A33D; font-size: 13px; font-weight: bold;");
+      console.log("%cRaw Speech-to-Text (STT) Transcript:", "color: #f59e0b; font-weight: bold;", rawTranscript);
+      console.log("%cConverted Hinglish Prompt:", "color: #10b981; font-weight: bold;", hinglish);
+      if (confidence !== undefined) {
+        console.log("Speech Confidence Score:", `${Math.round(confidence * 100)}%`);
+      }
+      console.log("%c🚀 Sending Prompt to Parser:", "color: #38bdf8; font-weight: bold;", hinglish);
+      console.groupEnd();
+
       setInput(hinglish);
       setListening(false);
       void handleSearch(hinglish);
     };
-    recognition.onerror = () => {
-      setInputError("Voice failed. Please type instead.");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onerror = (e: any) => {
+      console.error("%c[Speech-to-Text] ⚠️ Recognition Error:", "color: #ef4444; font-weight: bold;", e?.error || e);
+      setInputError("Voice recognition error: " + (e?.error ?? "Please type instead."));
       setListening(false);
     };
-    recognition.onend = () => setListening(false);
+
+    recognition.onend = () => {
+      setListening(false);
+    };
+
     recognitionRef.current = recognition;
     recognition.start();
-    setListening(true);
   };
 
 

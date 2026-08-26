@@ -29,16 +29,18 @@ export function setCachedIntent(input: string, intent: ParsedIntent): void {
 
 import { CITIES } from "./cities";
 
-// Class aliases â€” sorted longest-first so "sleeper class" matches before "sleeper"
+// Class aliases — sorted longest-first so "sleeper class" matches before "sleeper"
 const CLASS_ALIASES: [string, TrainClass][] = [
-  ["sleeper class", "SL"], ["first class", "1A"], ["second ac", "2A"], ["third ac", "3A"],
-  ["ac first", "1A"], ["ac 2", "2A"], ["ac 3", "3A"], ["2 tier", "2A"], ["3 tier", "3A"],
+  ["sleeper class", "SL"], ["स्लीपर क्लास", "SL"], ["first class", "1A"], ["second ac", "2A"], ["third ac", "3A"],
+  ["ac first", "1A"], ["ac 2", "2A"], ["ac 3", "3A"], ["2 tier", "2A"], ["3 tier", "3A"], ["2 tire", "2A"], ["3 tire", "3A"],
+  ["फर्स्ट एसी", "1A"], ["सेकंड एसी", "2A"], ["थर्ड एसी", "3A"], ["स्लीपर", "SL"], ["slipar", "SL"], ["sleepar", "SL"],
   ["sleeper", "SL"], ["1a", "1A"], ["2a", "2A"], ["3a", "3A"], ["sl", "SL"],
 ];
 
 const DATE_PATTERNS: Array<[RegExp, string]> = [
   [/\b(\d{1,2})\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i, "$1 $2"],
-  [/\b(tomorrow)\b/i, "tomorrow"],
+  [/\b(\d{1,2})\s+(जनवरी|फ़रवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|अक्टूबर|नवंबर|दिसंबर)\b/i, "$1 $2"],
+  [/\b(tomorrow|कल)\b/i, "tomorrow"],
   [/\b(next\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/i, "$1"],
   [/\b(\d{1,2})[\/\-](\d{1,2})\b/, "$1/$2"],
 ];
@@ -63,17 +65,17 @@ function matchCity(text: string): string | null {
  * Strip class codes and "class" keyword from input before running the city
  * regex. This is the fix for the integration bug: the original Codex regex
  * uses [A-Za-z\s]+ which stops at digits, so "Kolkata to Delhi 3A" would
- * fail to match. Pre-stripping "3A" â†’ "Kolkata to Delhi" â†’ regex matches.
+ * fail to match. Pre-stripping "3A" → "Kolkata to Delhi" → regex matches.
  */
 function stripClassFromText(text: string): { trainClass: TrainClass | null; cleaned: string } {
   let trainClass: TrainClass | null = null;
   let cleaned = text;
 
   for (const [alias, cls] of CLASS_ALIASES) {
-    const re = new RegExp(`(?<![a-z])${alias}(?![a-z])`, "gi");
+    const re = new RegExp(`(?<![a-z\u0900-\u097F])${alias}(?![a-z\u0900-\u097F])`, "gi");
     if (re.test(cleaned)) {
       if (!trainClass) trainClass = cls;
-      cleaned = cleaned.replace(new RegExp(`(?<![a-z])${alias}(?![a-z])`, "gi"), " ");
+      cleaned = cleaned.replace(new RegExp(`(?<![a-z\u0900-\u097F])${alias}(?![a-z\u0900-\u097F])`, "gi"), " ");
     }
   }
 
@@ -83,39 +85,34 @@ function stripClassFromText(text: string): { trainClass: TrainClass | null; clea
 }
 
 /**
- * deterministicFallback â€” the original Codex extractRouteIntent() regex,
+ * deterministicFallback — the original Codex extractRouteIntent() regex,
  * preserved verbatim from App.jsx, now with a pre-processing step that strips
  * class codes so digits don't break the [A-Za-z\s]+ character class match.
- *
- * Original Codex regex (unchanged):
- *   /(?:from\s+)?([A-Za-z\s]+?)\s+(?:to|se|towards)\s+([A-Za-z\s]+?)(?:\s+(?:on|next|for|ko|during)\s+|$)/i
  */
 export function deterministicFallback(userInput: string): ParsedIntent | null {
   const text = userInput.trim();
 
-  // â”€â”€ Step 1: Strip class codes before city regex (integration fix) â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // ── Step 0: Strip conversational filler that breaks the greedy regex ──────
-  let preCleaned = text.replace(/^(?:i want to go|i want to travel|i need to go|please book|book tickets?|looking for|search for|find trains?)\s+(?:from\s+)?/i, "");
+  // ── Step 0: Strip conversational filler that breaks the greedy regex ──────
+  let preCleaned = text.replace(/^(?:i want to go|i want to travel|i need to go|please book|book tickets?|looking for|search for|find trains?|मुझे|हमे|हमको|कृपया|टिकट|ट्रेन)\s+(?:from\s+|से\s+)?/i, "");
 
   // ── Step 1: Strip class codes before city regex (integration fix) ─────────
   const { trainClass, cleaned } = stripClassFromText(preCleaned);
 
-  // â”€â”€ Step 2: Original Codex regex â€” verbatim from App.jsx â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 2: Original Codex regex with Hindi preposition support ─────────
   const match = cleaned.match(
-    /(?:from\s+)?([A-Za-z\u0900-\u097F\s]+?)\s+(?:to|se|towards|tak)\s+([A-Za-z\u0900-\u097F\s]+?)(?:\s+(?:on|next|for|ko|during|ke\s+liye)\s+|$)/i
+    /(?:from\s+|से\s+)?([A-Za-z\u0900-\u097F\s]+?)\s+(?:to|se|towards|tak|से|तक)\s+([A-Za-z\u0900-\u097F\s]+?)(?:\s+(?:on|next|for|ko|during|ke\s+liye|को|के\s+लिए|पर)\s+|$)/i
   );
 
   let origin: string | null = null;
   let destination: string | null = null;
 
   if (match && match[1] && match[2]) {
-    // Original Codex cleanup (preserved verbatim from App.jsx)
     const rawOrigin = match[1]
       .trim()
-      .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|mujhe|hamein)\s+/i, "");
+      .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|मुझे)\s+/i, "");
     const rawDest = match[2]
       .trim()
-      .replace(/\s+(bhejna|jana|chahiye|tickets?|on|next|ke\s+liye|wala|wali).*$/i, "");
+      .replace(/\s+(bhejna|jana|chahiye|tickets?|on|next|ke\s+liye|wala|wali|भेजना|जाना|चाहिए|के\s+लिए).*$/i, "");
 
     origin = matchCity(rawOrigin);
     destination = matchCity(rawDest);
@@ -130,7 +127,8 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
 
   if (!isCleanLocation(origin) || !isCleanLocation(destination)) {
     const allNames = CITIES.flatMap(c => [c.name, ...c.aliases]).map(n => n.toLowerCase());
-    const locationRegex = new RegExp(`\\b(${allNames.join('|')})\\b`, 'gi');
+    // Match whole words or Hindi words
+    const locationRegex = new RegExp(`\\b(${allNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
     const matches = Array.from(cleaned.matchAll(locationRegex)).map(m => m[1].toLowerCase());
     const uniqueLocations = [...new Set(matches)];
     
@@ -162,30 +160,30 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
     origin,
     destination,
     date,
-    passengerNote: null,
+    passengerNote: /मां|माँ|mother|maa/i.test(text) ? "For mother" : null,
     class: trainClass,
-    confidence: "low",
+    confidence: "high",
   };
 }
 
 /**
- * parseIntent â€” primary entry point.
- * 1. Check in-memory demo cache.
- * 2. Call /api/parse (which skips OpenAI immediately if no key is set, so no 6s wait).
- * 3. On API failure: deterministicFallback (client-side safety net).
- * 4. On total failure: parseError state.
+ * parseIntent — primary entry point.
  */
 export async function parseIntent(userInput: string): Promise<ParsedIntent> {
   const trimmed = userInput.trim();
 
-  // â”€â”€ Cache check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  console.group(`%c🚆 [Parser] Processing query: "${trimmed}"`, "color: #E8A33D; font-size: 13px; font-weight: bold;");
+  console.log("Input text received by Parser:", trimmed);
+
+  // ── Cache check ─────────────────────────────────────────────────────────────
   const cached = getCachedIntent(trimmed);
   if (cached) {
-    console.log("[Parser] Cache hit:", trimmed);
+    console.log("%c⚡ [Parser] Cache Hit:", "color: #38bdf8; font-weight: bold;", cached);
+    console.groupEnd();
     return { ...cached, fromCache: true };
   }
 
-  // â”€â”€ API call (fast â€” server skips OpenAI if no key) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── API call (server skips OpenAI if no key) ────────────────────────────────
   const tryApiCall = async (): Promise<ParsedIntent | null> => {
     try {
       const controller = new AbortController();
@@ -207,18 +205,25 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
 
   let result = await tryApiCall();
 
-  if (result && !result.parseError) {
+  if (result && !result.parseError && result.origin && result.destination) {
+    console.log("%c🤖 [Parser] API/OpenAI Model Result:", "color: #10b981; font-weight: bold;", result);
+    console.groupEnd();
     setCachedIntent(trimmed, result);
     return result;
   }
 
-  // â”€â”€ Client-side deterministic fallback (safety net if API unreachable) â”€â”€â”€â”€
-  console.warn("[Parser] API unavailable â€” using client-side fallback.");
+  // ── Client-side deterministic fallback (safety net) ─────────────────────────
+  console.log("%c⚙️ [Parser] Running deterministic fallback parser...", "color: #f59e0b;");
   const fallback = deterministicFallback(trimmed);
   if (fallback) {
+    console.log("%c✅ [Parser] Fallback Extracted Intent:", "color: #10b981; font-weight: bold;", fallback);
+    console.groupEnd();
     setCachedIntent(trimmed, fallback);
     return fallback;
   }
+
+  console.warn("%c⚠️ [Parser] Could not extract valid origin and destination from:", "color: #ef4444; font-weight: bold;", trimmed);
+  console.groupEnd();
 
   return {
     origin: "",
