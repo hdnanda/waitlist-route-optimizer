@@ -22,7 +22,6 @@ import {
 import { parseIntent } from "@/lib/parser";
 import { useApp } from "@/lib/context";
 import FaqSection from "@/components/FaqSection";
-import HeartConfetti from "@/components/HeartConfetti";
 
 const EXAMPLE_CHIPS = [
   {
@@ -87,7 +86,6 @@ export default function HomePage() {
   const [listening, setListening] = useState(false);
   const [voiceLang, setVoiceLang] = useState<"en-IN" | "hi-IN">("en-IN");
   const [showSessionNotice, setShowSessionNotice] = useState(false);
-  const [showHeartConfetti, setShowHeartConfetti] = useState(false);
   const recognitionRef = useRef<unknown>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const latestTranscriptRef = useRef<string>("");
@@ -111,18 +109,6 @@ export default function HomePage() {
         setInputError("Enter or speak a journey request.");
         return;
       }
-
-      // ── Easter Egg Check: Destination "dhruv's heart" ───────────────────────
-      if (/dhruv'?s?\s+heart/i.test(text)) {
-        setInputError("");
-        setShowHeartConfetti(true);
-        setTimeout(() => {
-          setShowHeartConfetti(false);
-          setInput("");
-        }, 2200);
-        return;
-      }
-
       setInputError("");
       setLoading(true);
       try {
@@ -390,9 +376,6 @@ export default function HomePage() {
       animate={{ opacity: 1 }}
       className="relative flex min-h-screen flex-col px-5 sm:px-6 pb-32 pt-5 lg:pt-8 bg-transparent w-full"
     >
-      {/* ── Easter Egg Falling Heart Confetti ── */}
-      <HeartConfetti active={showHeartConfetti} />
-
       {/* ── Responsive Wrapper: Centered mobile max-w-[480px], expanding to max-w-6xl 2-column on desktop ── */}
       <div className="w-full max-w-[480px] lg:max-w-6xl mx-auto">
         
