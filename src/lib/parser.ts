@@ -2,7 +2,7 @@
  * Client-side parser utilities.
  *
  * Attribution: The deterministicFallback below is derived from the original
- * Codex/OpenAI-built parser in App.jsx â€” specifically the extractRouteIntent()
+ * Codex/OpenAI-built parser in App.jsx — specifically the extractRouteIntent()
  * regex and city-matching logic, preserved verbatim. The core regex pattern
  * is unchanged from the Codex build; only a pre-processing step is added to
  * strip class codes (3A, 2A, etc.) before the regex runs, which was the
@@ -13,8 +13,9 @@
  */
 
 import type { ParsedIntent, TrainClass } from "./types";
+import { CITIES } from "./cities";
 
-// â”€â”€ In-memory demo cache (keyed by exact input string) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── In-memory demo cache (keyed by exact input string) ────────────────────────
 const intentCache = new Map<string, ParsedIntent>();
 
 export function getCachedIntent(input: string): ParsedIntent | null {
@@ -24,10 +25,6 @@ export function getCachedIntent(input: string): ParsedIntent | null {
 export function setCachedIntent(input: string, intent: ParsedIntent): void {
   intentCache.set(input, { ...intent, fromCache: false });
 }
-
-// â”€â”€ Known city names (from original Codex parser, extended) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-import { CITIES } from "./cities";
 
 // Class aliases — sorted longest-first so "sleeper class" matches before "sleeper"
 const CLASS_ALIASES: [string, TrainClass][] = [
@@ -63,9 +60,7 @@ function matchCity(text: string): string | null {
 
 /**
  * Strip class codes and "class" keyword from input before running the city
- * regex. This is the fix for the integration bug: the original Codex regex
- * uses [A-Za-z\s]+ which stops at digits, so "Kolkata to Delhi 3A" would
- * fail to match. Pre-stripping "3A" → "Kolkata to Delhi" → regex matches.
+ * regex.
  */
 function stripClassFromText(text: string): { trainClass: TrainClass | null; cleaned: string } {
   let trainClass: TrainClass | null = null;
@@ -79,23 +74,126 @@ function stripClassFromText(text: string): { trainClass: TrainClass | null; clea
     }
   }
 
-  // Clean up extra whitespace/punctuation left behind
   cleaned = cleaned.replace(/\s{2,}/g, " ").replace(/,\s*$/, "").trim();
   return { trainClass, cleaned };
 }
 
 /**
- * deterministicFallback — the original Codex extractRouteIntent() regex,
- * preserved verbatim from App.jsx, now with a pre-processing step that strips
- * class codes so digits don't break the [A-Za-z\s]+ character class match.
+ * Extract unrecognized tokens from input sentence after stripping recognized keywords.
+ */
+function extractUnrecognizedWords(userInput: string, parsed: ParsedIntent): string[] {
+  let text = userInput.toLowerCase();
+  
+  // Remove known matched cities and their aliases
+  if (parsed.origin) {
+    const origObj = CITIES.find(c => c.name.toLowerCase() === parsed.origin.toLowerCase());
+    const terms = origObj ? [origObj.name, ...origObj.aliases] : [parsed.origin];
+    for (const t of terms) {
+      text = text.replace(new RegExp(`\\b${t.toLowerCase()}\\b`, "gi"), " ");
+    }
+  }
+  if (parsed.destination) {
+    const destObj = CITIES.find(c => c.name.toLowerCase() === parsed.destination.toLowerCase());
+    const terms = destObj ? [destObj.name, ...destObj.aliases] : [parsed.destination];
+    for (const t of terms) {
+      text = text.replace(new RegExp(`\\b${t.toLowerCase()}\\b`, "gi"), " ");
+    }
+  }
+
+  // Remove known class aliases
+  for (const [alias] of CLASS_ALIASES) {
+    text = text.replace(new RegExp(`\\b${alias.toLowerCase()}\\b`, "gi"), " ");
+  }
+
+  // Remove common date patterns
+  for (const [pat] of DATE_PATTERNS) {
+    text = text.replace(pat, " ");
+  }
+
+  // Remove standard conversational filler & relation terms
+  const commonFillers = [
+    "to", "from", "se", "tak", "ko", "ke", "liye", "par", "mein", "on", "for", "in",
+    "i", "want", "travel", "need", "go", "book", "tickets", "ticket", "looking", "search", "find", "train", "trains",
+    "bhejna", "hai", "bhejo", "jana", "jaana", "chahiye", "karo", "karwana",
+    "maa", "mother", "papa", "pitaji", "father", "bhai", "bhaiya", "sister", "didi", "dost", "friend", "family", "wife", "husband",
+    "mujhe", "hume", "hamein", "humko", "kripya", "please", "urgent", "tatkal", "seat", "seats", "berth"
+  ];
+
+  for (const filler of commonFillers) {
+    text = text.replace(new RegExp(`\\b${filler}\\b`, "gi"), " ");
+  }
+
+  const leftovers = text.split(/\s+/).map(w => w.replace(/[^a-z0-9\u0900-\u097F]/gi, "").trim()).filter(w => w.length > 2);
+  return [...new Set(leftovers)];
+}
+
+/**
+ * Diagnostic logger that prints what the parser understood vs what it did not understand.
+ */
+function logParserDiagnostics(userInput: string, parsed: ParsedIntent, source: string) {
+  const isComplete = Boolean(parsed.origin && parsed.destination && parsed.origin.toLowerCase() !== parsed.destination.toLowerCase());
+  const unrecognizedTokens = extractUnrecognizedWords(userInput, parsed);
+
+  console.group(`%c🚆 [Parser Diagnostic Report] (${source})`, isComplete ? "color: #10b981; font-size: 13px; font-weight: bold;" : "color: #ef4444; font-size: 13px; font-weight: bold;");
+  console.log("%cInput Prompt:", "color: #f59e0b; font-weight: bold;", `"${userInput}"`);
+
+  // ── 1. WHAT WAS UNDERSTOOD ───────────────────────────────────────────────
+  console.group("%c✅ What the Parser UNDERSTOOD:", "color: #10b981; font-weight: bold;");
+  console.log("  • Origin Station :", parsed.origin ? `"${parsed.origin}"` : "❌ Not found");
+  console.log("  • Destination    :", parsed.destination ? `"${parsed.destination}"` : "❌ Not found");
+  console.log("  • Travel Date    :", parsed.date ? `"${parsed.date}"` : "— Not in prompt (will be prompted on results)");
+  console.log("  • Seat Class     :", parsed.class ? `"${parsed.class}"` : "— Not in prompt (will be prompted on results)");
+  console.log("  • Passenger Note :", parsed.passengerNote ? `"${parsed.passengerNote}"` : "— None");
+  console.log("  • Confidence     :", parsed.confidence.toUpperCase());
+  console.groupEnd();
+
+  // ── 2. WHAT WAS NOT UNDERSTOOD / MISSING ─────────────────────────────────
+  console.group("%c❓ What the Parser DID NOT UNDERSTAND / Needs Resolution:", isComplete ? "color: #64748b; font-weight: bold;" : "color: #f43f5e; font-weight: bold;");
+  
+  const issues: string[] = [];
+  if (!parsed.origin && !parsed.destination) {
+    issues.push("Neither origin nor destination could be identified from this sentence.");
+  } else if (!parsed.origin) {
+    issues.push("Origin station is missing or unrecognized (e.g. unknown station/city name or spelling).");
+  } else if (!parsed.destination) {
+    issues.push("Destination station is missing or unrecognized (e.g. unknown station/city name or spelling).");
+  } else if (parsed.origin.toLowerCase() === parsed.destination.toLowerCase()) {
+    issues.push(`Origin and Destination both resolved to the same location ("${parsed.origin}"). Two distinct stations are required.`);
+  }
+
+  if (unrecognizedTokens.length > 0) {
+    issues.push(`Unmatched words/phrases not in train directory: [ ${unrecognizedTokens.map(w => `"${w}"`).join(", ")} ]`);
+  }
+
+  if (issues.length === 0) {
+    console.log("  • Everything required was understood cleanly! No missing stations.");
+  } else {
+    for (const issue of issues) {
+      console.warn("  •", issue);
+    }
+  }
+  console.groupEnd();
+
+  // ── 3. OUTCOME STATUS ───────────────────────────────────────────────────
+  if (isComplete) {
+    console.log("%c🎯 Status: READY → Routing from " + parsed.origin + " to " + parsed.destination, "color: #38bdf8; font-weight: bold;");
+  } else {
+    console.warn("%c🛑 Status: INCOMPLETE → Search will ask user to clarify stations", "color: #ef4444; font-weight: bold;");
+  }
+
+  console.groupEnd();
+}
+
+/**
+ * deterministicFallback — extractRouteIntent() regex and city-matching logic.
  */
 export function deterministicFallback(userInput: string): ParsedIntent | null {
   const text = userInput.trim();
 
-  // ── Step 0: Strip conversational filler that breaks the greedy regex ──────
+  // ── Step 0: Strip conversational filler ──────
   let preCleaned = text.replace(/^(?:i want to go|i want to travel|i need to go|please book|book tickets?|looking for|search for|find trains?|मुझे|हमे|हमको|कृपया|टिकट|ट्रेन)\s+(?:from\s+|से\s+)?/i, "");
 
-  // ── Step 1: Strip class codes before city regex (integration fix) ─────────
+  // ── Step 1: Strip class codes before city regex ─────────
   const { trainClass, cleaned } = stripClassFromText(preCleaned);
 
   // ── Step 2: Check for inverted Hindi syntax: "[Dest] bhejna hai [Origin] se" ──
@@ -160,7 +258,6 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
       origin = uniqueLocations[0];
       destination = uniqueLocations[1];
     } else if (uniqueLocations.length === 1) {
-      // Only 1 distinct city found in text — DO NOT set both origin and destination to the same city!
       if (isCleanLocation(origin) && origin!.toLowerCase() !== uniqueLocations[0].toLowerCase()) {
         destination = uniqueLocations[0];
       } else if (isCleanLocation(destination) && destination!.toLowerCase() !== uniqueLocations[0].toLowerCase()) {
@@ -199,19 +296,15 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
 }
 
 /**
- * parseIntent — primary entry point.
+ * parseIntent — primary entry point with enhanced diagnostics.
  */
 export async function parseIntent(userInput: string): Promise<ParsedIntent> {
   const trimmed = userInput.trim();
 
-  console.group(`%c🚆 [Parser] Processing query: "${trimmed}"`, "color: #E8A33D; font-size: 13px; font-weight: bold;");
-  console.log("Input text received by Parser:", trimmed);
-
   // ── Cache check ─────────────────────────────────────────────────────────────
   const cached = getCachedIntent(trimmed);
   if (cached && !cached.parseError && cached.origin && cached.destination && cached.origin.toLowerCase() !== cached.destination.toLowerCase()) {
-    console.log("%c⚡ [Parser] Cache Hit:", "color: #38bdf8; font-weight: bold;", cached);
-    console.groupEnd();
+    logParserDiagnostics(trimmed, cached, "In-Memory Cache");
     return { ...cached, fromCache: true };
   }
 
@@ -228,14 +321,14 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
       });
       clearTimeout(timeout);
       if (!res.ok) return null;
-      const data = await res.json() as ParsedIntent;
+      const data = (await res.json()) as ParsedIntent;
       return data;
     } catch {
       return null;
     }
   };
 
-  let result = await tryApiCall();
+  const result = await tryApiCall();
 
   if (
     result &&
@@ -244,14 +337,12 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
     result.destination &&
     result.origin.toLowerCase() !== result.destination.toLowerCase()
   ) {
-    console.log("%c🤖 [Parser] API/OpenAI Model Result:", "color: #10b981; font-weight: bold;", result);
-    console.groupEnd();
+    logParserDiagnostics(trimmed, result, "AI / OpenAI Engine");
     setCachedIntent(trimmed, result);
     return result;
   }
 
   // ── Client-side deterministic fallback (safety net) ─────────────────────────
-  console.log("%c⚙️ [Parser] Running deterministic fallback parser...", "color: #f59e0b;");
   const fallback = deterministicFallback(trimmed);
   if (
     fallback &&
@@ -259,16 +350,13 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
     fallback.destination &&
     fallback.origin.toLowerCase() !== fallback.destination.toLowerCase()
   ) {
-    console.log("%c✅ [Parser] Fallback Extracted Intent:", "color: #10b981; font-weight: bold;", fallback);
-    console.groupEnd();
+    logParserDiagnostics(trimmed, fallback, "Deterministic Pattern Parser");
     setCachedIntent(trimmed, fallback);
     return fallback;
   }
 
-  console.warn("%c⚠️ [Parser] Could not extract two distinct origin & destination stations from:", "color: #ef4444; font-weight: bold;", trimmed);
-  console.groupEnd();
-
-  return {
+  // ── Failure breakdown ───────────────────────────────────────────────────────
+  const failedIntent: ParsedIntent = {
     origin: "",
     destination: "",
     date: null,
@@ -277,5 +365,7 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
     confidence: "low",
     parseError: true,
   };
-}
 
+  logParserDiagnostics(trimmed, failedIntent, "Unresolved / Error");
+  return failedIntent;
+}

@@ -102,12 +102,22 @@ export default function HomePage() {
           !intent.destination ||
           intent.origin.toLowerCase() === intent.destination.toLowerCase()
         ) {
+          const reason = !intent.origin && !intent.destination
+            ? "Neither origin nor destination could be identified"
+            : !intent.origin
+            ? "Origin station missing/unrecognized"
+            : !intent.destination
+            ? "Destination station missing/unrecognized"
+            : `Origin and destination are the same station (${intent.origin})`;
+
+          console.warn(`%c⚠️ [Search Guard] Search not dispatched: ${reason}`, "color: #f59e0b; font-weight: bold;");
           setInputError("Could not identify both stations. Please specify both origin and destination (e.g. 'Goa to Jhansi').");
           return;
         }
         setParsedIntent(intent);
         router.push("/results");
-      } catch {
+      } catch (err) {
+        console.error("%c❌ [Search Error]", "color: #ef4444; font-weight: bold;", err);
         setInputError("Something went wrong. Please try again.");
       } finally {
         setLoading(false);
