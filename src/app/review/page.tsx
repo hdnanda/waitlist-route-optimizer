@@ -36,58 +36,64 @@ export default function ReviewPage() {
         </div>
         <h1 className="font-serif text-2xl font-bold mb-6 text-white">Confirm your journey</h1>
 
-        {/* Journey summary card */}
-        <div className="rounded-2xl bg-[#080808] border border-[#E8A33D]/80 shadow-[0_0_16px_rgba(232,163,61,0.35)] overflow-hidden">
-          <div className="p-5 bg-[#080808]">
-            <p className="font-mono text-[10px] font-bold tracking-widest text-[#E8A33D] mb-1">JOURNEY</p>
-            <p className="font-serif text-lg font-bold text-white">{selectedOption.route}</p>
-            <p className="mt-1 font-mono text-xs text-slate-400">{selectedOption.meta}</p>
+        {/* Journey summary parchment ticket card */}
+        <div
+          className="rounded-[10px] overflow-hidden border-2 border-[#E8A33D] shadow-[0_8px_24px_rgba(232,163,61,0.25),0_6px_18px_rgba(0,0,0,0.28)]"
+          style={{
+            backgroundColor: "var(--paper, #F7EFE0)",
+            color: "var(--text-on-paper, #1C2B4A)",
+          }}
+        >
+          <div className="p-5" style={{ backgroundColor: "var(--paper, #F7EFE0)" }}>
+            <p className="font-mono text-[10px] font-bold tracking-widest text-[#9C6110] mb-1">JOURNEY</p>
+            <p className="font-serif text-xl font-bold text-[#1C2B4A]">{selectedOption.route}</p>
+            <p className="mt-1 font-mono text-xs text-[#5B5342]">{selectedOption.meta}</p>
             <div className="mt-3 flex items-center gap-2">
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-mono font-bold ${selectedOption.statusBg}`}>
                 {selectedOption.statusDisplay}
               </span>
-              <span className="text-xs font-mono text-slate-400">{selectedOption.type === "SPLIT" ? "Split ticket · 2 PNRs" : "Single ticket"}</span>
+              <span className="text-xs font-mono text-[#5B5342] font-semibold">{selectedOption.type === "SPLIT" ? "Split ticket · 2 PNRs" : "Single ticket"}</span>
             </div>
 
             {/* Leg breakdown for split */}
             {selectedOption.isSplit && selectedOption.leg1 && selectedOption.leg2 && (
-              <div className="mt-3 rounded-xl bg-black/60 border border-white/10 p-3 space-y-2">
+              <div className="mt-3.5 rounded-lg bg-[#EDE3CE] border border-[#D8CCB5] p-3 space-y-2">
                 {[selectedOption.leg1, selectedOption.leg2].map((leg, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[10px] font-mono text-slate-300">
-                    <span className="rounded bg-[#E8A33D]/20 text-[#E8A33D] px-1 py-0.5 font-bold shrink-0">LEG {i + 1}</span>
-                    <span className="truncate">{leg.from} → {leg.to}</span>
-                    <span className="ml-auto shrink-0 text-slate-400">{leg.departure}–{leg.arrival}</span>
+                  <div key={i} className="flex items-center gap-2 text-[10px] font-mono text-[#1C2B4A]">
+                    <span className="rounded bg-[#E8A33D] text-black px-1.5 py-0.5 font-bold shrink-0 text-[9px]">LEG {i + 1}</span>
+                    <span className="truncate font-bold">{leg.from} → {leg.to}</span>
+                    <span className="ml-auto shrink-0 text-[#5B5342]">{leg.departure}–{leg.arrival}</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="relative border-t border-dashed border-[#E8A33D]/40">
-            <div className="absolute -top-3 -left-3 h-6 w-6 rounded-full bg-black border-r border-[#E8A33D]/40" />
-            <div className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-black border-l border-[#E8A33D]/40" />
+          <div className="relative h-0 w-full border-t border-dashed border-[#D6C8B0]">
+            <div className="absolute -top-3 -left-3 h-6 w-6 rounded-full bg-black border-r border-[#D6C8B0]" />
+            <div className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-black border-l border-[#D6C8B0]" />
           </div>
 
-          <div className="bg-[#0E0E0E] p-5">
+          <div className="p-5" style={{ backgroundColor: "var(--paper-dim, #EDE3CE)" }}>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-mono font-bold text-slate-400">TOTAL FARE</span>
-              <span className="font-mono text-xl font-bold text-white">₹{selectedOption.fare.toLocaleString("en-IN")}</span>
+              <span className="text-xs font-mono font-bold text-[#5B5342]">TOTAL FARE</span>
+              <span className="font-mono text-xl font-bold text-[#1C2B4A]">₹{selectedOption.fare.toLocaleString("en-IN")}</span>
             </div>
 
-            <label className="text-xs font-mono font-bold tracking-[0.1em] text-[#E8A33D] uppercase">
+            <label className="text-xs font-mono font-bold tracking-[0.1em] text-[#9C6110] uppercase">
               PRIMARY PASSENGER
             </label>
-            <div className="mt-2 flex items-center justify-between rounded-xl border border-[#E8A33D]/40 bg-black/80 px-4 py-3.5 shadow-[inset_0_0_8px_rgba(0,0,0,0.5)]">
+            <div className="mt-2 flex items-center justify-between rounded-xl border border-[#D8CCB5] bg-[#F7EFE0] px-4 py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
               <div className="flex items-center gap-2.5">
-                <UserCheck className="h-4 w-4 text-[#3F8F5F]" />
+                <UserCheck className="h-4 w-4 text-[#276F43]" />
                 <div>
-                  <p className="text-sm font-bold text-white leading-tight">{loggedInAccount.name}</p>
-                  <p className="text-[10px] font-mono text-slate-400">
+                  <p className="text-sm font-bold text-[#1C2B4A] leading-tight">{loggedInAccount.name}</p>
+                  <p className="text-[10px] font-mono text-[#5B5342]">
                     +91 ••••••{loggedInAccount.mobileLast4} {loggedInAccount.age ? `• ${loggedInAccount.age} yrs` : ""}
                   </p>
                 </div>
               </div>
-              <span className="rounded-full border border-[#3F8F5F]/40 bg-[#3F8F5F]/15 px-2 py-0.5 text-[9px] font-mono font-bold text-[#3F8F5F]">
+              <span className="rounded-full border border-[#3F8F5F]/40 bg-[#3F8F5F]/15 px-2 py-0.5 text-[9px] font-mono font-bold text-[#276F43]">
                 VERIFIED
               </span>
             </div>

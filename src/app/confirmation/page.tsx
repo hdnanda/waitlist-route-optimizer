@@ -44,28 +44,67 @@ export default function ConfirmationPage() {
           )}
         </motion.div>
 
-        {/* PNR card */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-          className="mt-6 w-full rounded-2xl bg-[#080808] border border-[#E8A33D]/70 shadow-[0_0_16px_rgba(232,163,61,0.3)] overflow-hidden">
-          <div className="p-5 bg-[#080808]">
-            <p className="font-mono text-[10px] font-bold tracking-widest text-[#E8A33D]">MOCK PNR</p>
-            <p className="mt-2 font-mono text-xl font-bold tracking-wide text-white">{currentBooking.pnr}</p>
-            <p className="mt-1 text-xs font-mono text-slate-400">
-              {currentBooking.isSplit ? "Split ticket · 2 legs · Both CONFIRMED" : "Direct booking · CONFIRMED"}
+        {/* PNR Parchment Physical Ticket Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-6 w-full overflow-hidden rounded-[10px] border-2 border-[#E8A33D] shadow-[0_8px_24px_rgba(232,163,61,0.25),0_6px_18px_rgba(0,0,0,0.28)]"
+          style={{
+            backgroundColor: "var(--paper, #F7EFE0)",
+            color: "var(--text-on-paper, #1C2B4A)",
+          }}
+        >
+          {/* Top Section (Warm Cream) */}
+          <div className="p-5" style={{ backgroundColor: "var(--paper, #F7EFE0)" }}>
+            <div className="flex items-center justify-between">
+              <span className="rounded-full bg-[#E8A33D] px-2.5 py-0.5 text-[10px] font-mono font-bold text-black">
+                {currentBooking.isSplit ? "SPLIT TICKET" : "DIRECT TICKET"}
+              </span>
+              <span className="rounded-full border border-[#3F8F5F]/40 bg-[#3F8F5F]/15 px-2.5 py-0.5 text-[10px] font-mono font-bold text-[#276F43]">
+                {currentBooking.isSplit ? "SPLIT CONFIRMED" : "CONFIRMED"}
+              </span>
+            </div>
+
+            <p className="mt-3 font-mono text-[10px] font-bold tracking-widest text-[#9C6110] uppercase">
+              MOCK PNR
+            </p>
+            <p className="mt-0.5 font-mono text-2xl font-extrabold tracking-wide text-[#1C2B4A]">
+              {currentBooking.pnr}
+            </p>
+            <p className="mt-1 font-serif text-lg font-bold text-[#1C2B4A]">
+              {currentBooking.route}
+            </p>
+            <p className="mt-0.5 font-mono text-[11px] text-[#5B5342]">
+              {currentBooking.isSplit ? "2 legs · Both CONFIRMED" : "Direct booking · CONFIRMED"}
             </p>
           </div>
 
-          <div className="relative border-t border-dashed border-[#E8A33D]/40">
-            <div className="absolute -top-3 -left-3 h-6 w-6 rounded-full bg-black border-r border-[#E8A33D]/40" />
-            <div className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-black border-l border-[#E8A33D]/40" />
+          {/* Perforated Divider with dark background notches */}
+          <div className="relative h-0 w-full border-t border-dashed border-[#D6C8B0]">
+            <div className="absolute -top-3 -left-3 h-6 w-6 rounded-full bg-black border-r border-[#D6C8B0]" />
+            <div className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-black border-l border-[#D6C8B0]" />
           </div>
 
-          <div className="bg-[#0E0E0E] p-5">
+          {/* Lower Section (Slightly Darker Cream) */}
+          <div className="p-5" style={{ backgroundColor: "var(--paper-dim, #EDE3CE)" }}>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><p className="text-[10px] text-slate-500 font-mono">TRAIN</p><p className="mt-0.5 text-white font-semibold text-xs leading-tight">{currentBooking.train}</p></div>
-              <div><p className="text-[10px] text-slate-500 font-mono">DATE</p><p className="mt-0.5 text-white font-semibold">{currentBooking.date}</p></div>
-              <div><p className="text-[10px] text-slate-500 font-mono">CLASS</p><p className="mt-0.5 text-white font-semibold">{currentBooking.class}</p></div>
-              <div><p className="text-[10px] text-slate-500 font-mono">STATUS</p><p className="mt-0.5 text-[#3F8F5F] font-bold text-xs">CONFIRMED</p></div>
+              <div>
+                <p className="text-[10.5px] text-[#5B5342] font-mono font-bold tracking-wider uppercase">TRAIN</p>
+                <p className="mt-0.5 text-[#1C2B4A] font-bold text-xs leading-tight">{currentBooking.train}</p>
+              </div>
+              <div>
+                <p className="text-[10.5px] text-[#5B5342] font-mono font-bold tracking-wider uppercase">DATE</p>
+                <p className="mt-0.5 text-[#1C2B4A] font-bold text-xs">{currentBooking.date}</p>
+              </div>
+              <div>
+                <p className="text-[10.5px] text-[#5B5342] font-mono font-bold tracking-wider uppercase">CLASS</p>
+                <p className="mt-0.5 text-[#1C2B4A] font-bold text-xs">{currentBooking.class}</p>
+              </div>
+              <div>
+                <p className="text-[10.5px] text-[#5B5342] font-mono font-bold tracking-wider uppercase">STATUS</p>
+                <p className="mt-0.5 text-[#276F43] font-bold text-xs">CONFIRMED</p>
+              </div>
             </div>
           </div>
         </motion.div>

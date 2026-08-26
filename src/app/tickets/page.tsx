@@ -8,46 +8,74 @@ import type { StoredTicket } from "@/lib/types";
 function TicketRow({ ticket }: { ticket: StoredTicket }) {
   const isSplit = ticket.isSplit || ticket.status === "SPLIT_CONFIRMED";
   return (
-    <div className="rounded-2xl bg-[#080808] border border-[#E8A33D]/60 shadow-[0_0_12px_rgba(232,163,61,0.25)] overflow-hidden">
-      <div className="p-4">
+    <article
+      className="ticket-card overflow-hidden rounded-[10px] border-2 border-[#E8A33D] shadow-[0_8px_24px_rgba(232,163,61,0.25),0_6px_18px_rgba(0,0,0,0.28)]"
+      style={{
+        backgroundColor: "var(--paper, #F7EFE0)",
+        color: "var(--text-on-paper, #1C2B4A)",
+      }}
+    >
+      {/* Top Section (Warm Cream) */}
+      <div className="p-4" style={{ backgroundColor: "var(--paper, #F7EFE0)" }}>
         <div className="flex items-start justify-between gap-2 mb-2">
-          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${isSplit ? "bg-[#E8A33D]/20 text-[#E8A33D] border border-[#E8A33D]/40" : "bg-[#3F8F5F]/20 text-[#3F8F5F] border border-[#3F8F5F]/40"}`}>
+          <span className="rounded-full bg-[#E8A33D] px-2.5 py-0.5 text-[10px] font-mono font-bold text-black">
             {isSplit ? "SPLIT TICKET" : "DIRECT"}
           </span>
-          <div className="flex items-center gap-1 text-[#3F8F5F]">
-            {isSplit ? <GitBranch className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-            <span className="font-mono text-[10px] font-bold">{ticket.status.replace("_", " ")}</span>
+          <div className="flex items-center gap-1 text-[#276F43]">
+            {isSplit ? <GitBranch className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+            <span className="font-mono text-[10px] font-bold tracking-wide">
+              {ticket.status.replace("_", " ")}
+            </span>
           </div>
         </div>
-        <p className="font-bold text-white leading-tight">{ticket.route}</p>
-        <p className="mt-1 font-mono text-[11px] text-slate-400 leading-tight">{ticket.train}</p>
-        {ticket.note && <p className="mt-2 text-[11px] text-slate-400 italic">{ticket.note}</p>}
+
+        <h2 className="font-serif text-lg font-bold leading-snug text-[#1C2B4A]">
+          {ticket.route}
+        </h2>
+        <p className="mt-1 font-mono text-[11px] leading-tight text-[#5B5342]">
+          {ticket.train}
+        </p>
+        {ticket.note && (
+          <p className="mt-2 font-mono text-[10.5px] text-[#7A6E58] italic bg-[#EDE3CE] px-2.5 py-1 rounded border border-[#D8CCB5]">
+            {ticket.note}
+          </p>
+        )}
       </div>
-      <div className="relative border-t border-dashed border-[#E8A33D]/30">
-        <div className="absolute -top-2.5 -left-2.5 h-5 w-5 rounded-full bg-black border-r border-[#E8A33D]/40" />
-        <div className="absolute -top-2.5 -right-2.5 h-5 w-5 rounded-full bg-black border-l border-[#E8A33D]/40" />
+
+      {/* Perforated Divider with dark background notches */}
+      <div className="relative h-0 w-full border-t border-dashed border-[#D6C8B0]">
+        <div className="absolute -top-2.5 -left-2.5 h-5 w-5 rounded-full bg-black border-r border-[#D6C8B0]" />
+        <div className="absolute -top-2.5 -right-2.5 h-5 w-5 rounded-full bg-black border-l border-[#D6C8B0]" />
       </div>
-      <div className="bg-[#0E0E0E] px-4 py-3 flex items-center justify-between">
+
+      {/* Lower Section (Slightly Darker Cream) */}
+      <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "var(--paper-dim, #EDE3CE)" }}>
         <div className="flex items-center gap-4">
           <div>
-            <p className="text-[10px] text-slate-500 font-mono">DATE</p>
-            <p className="text-xs font-semibold text-white">{ticket.date}</p>
+            <p className="text-[10px] text-[#5B5342] font-mono font-bold uppercase">DATE</p>
+            <p className="text-xs font-bold text-[#1C2B4A]">{ticket.date}</p>
           </div>
           <div>
-            <p className="text-[10px] text-slate-500 font-mono">CLASS</p>
-            <p className="text-xs font-semibold text-white">{ticket.class}</p>
+            <p className="text-[10px] text-[#5B5342] font-mono font-bold uppercase">CLASS</p>
+            <p className="text-xs font-bold text-[#1C2B4A]">{ticket.class}</p>
           </div>
         </div>
         {ticket.farePaid && (
-          <p className="font-mono text-sm font-bold text-[#E8A33D]">₹{ticket.farePaid.toLocaleString("en-IN")}</p>
+          <div className="text-right">
+            <p className="font-mono text-sm font-bold text-[#1C2B4A]">
+              ₹{ticket.farePaid.toLocaleString("en-IN")}
+            </p>
+          </div>
         )}
       </div>
       {ticket.pnr && (
-        <div className="px-4 pb-3 bg-[#0E0E0E]">
-          <p className="font-mono text-[10px] text-slate-500">{ticket.pnr}</p>
+        <div className="px-4 pb-2.5 pt-0.5 flex items-center justify-between" style={{ backgroundColor: "var(--paper-dim, #EDE3CE)" }}>
+          <p className="font-mono text-[10px] text-[#7A6E58] font-bold tracking-wider">
+            PNR: {ticket.pnr}
+          </p>
         </div>
       )}
-    </div>
+    </article>
   );
 }
 
