@@ -63,15 +63,15 @@ const EXAMPLE_CHIPS = [
 
 function GlowingSectionDivider({ title }: { title: string }) {
   return (
-    <div className="flex items-center my-4">
-      <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#E8A33D]/40 to-[#E8A33D]/80" />
+    <div className="flex items-center my-6">
+      <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#E8A33D]/30 to-[#E8A33D]/60" />
       <div className="flex items-center gap-1.5 px-3">
         <Sparkles className="h-2.5 w-2.5 text-[#E8A33D] animate-pulse" />
-        <span className="text-[10px] font-mono font-bold tracking-widest text-[#E8A33D] uppercase">
+        <span className="text-[10px] font-mono font-bold tracking-[0.18em] text-[#E8A33D] uppercase">
           {title}
         </span>
       </div>
-      <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#E8A33D]/40 to-[#E8A33D]/80" />
+      <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#E8A33D]/30 to-[#E8A33D]/60" />
     </div>
   );
 }
@@ -318,14 +318,14 @@ export default function HomePage() {
     <motion.main
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="relative flex min-h-screen flex-col px-5 pb-16 pt-4 lg:pt-8 bg-transparent w-full"
+      className="relative flex min-h-screen flex-col px-5 sm:px-6 pb-32 pt-5 lg:pt-8 bg-transparent w-full"
     >
       {/* ── Responsive Wrapper: Centered mobile max-w-[480px], expanding to max-w-6xl 2-column on desktop ── */}
       <div className="w-full max-w-[480px] lg:max-w-6xl mx-auto">
         
         {/* Mobile top pill (hidden on md+ where TopNav exists) */}
-        <div className="flex md:hidden items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex md:hidden items-center justify-between mb-7">
+          <div className="flex items-center gap-2.5">
             <TrainFront className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_8px_rgba(232,163,61,0.6)]" />
             <span className="font-mono text-xs tracking-widest text-[#E8A33D] uppercase font-bold">
               INDIAN RAIL ROUTES
@@ -335,7 +335,7 @@ export default function HomePage() {
             type="button"
             onClick={() => router.push("/tickets")}
             aria-label="Menu"
-            className="h-8 w-8 rounded-full border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] flex items-center justify-center bg-black hover:bg-[#0A0A0A] transition-all duration-200"
+            className="h-9 w-9 rounded-full border border-[#E8A33D]/70 shadow-[0_0_10px_rgba(232,163,61,0.3)] flex items-center justify-center bg-transparent hover:bg-[#0A0A0A] transition-all duration-200"
           >
             <Menu className="h-4 w-4 text-[#E8A33D]" />
           </button>
@@ -346,14 +346,14 @@ export default function HomePage() {
           
           {/* ── Left Column (lg:col-span-5): Branding & 3-Step Explainer ─────────── */}
           <div className="lg:col-span-5 flex flex-col justify-between">
-            <header className="mt-0.5">
-              <h1 className="font-serif text-4xl sm:text-5xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
+            <header className="mt-1">
+              <h1 className="font-serif text-[46px] sm:text-6xl font-black text-white tracking-tight leading-[1.08] drop-shadow-[0_0_24px_rgba(232,163,61,0.35)]">
                 घर वापसी
               </h1>
-              <p className="mt-4 font-serif text-2xl sm:text-3xl font-bold text-[#EBE5D8] leading-tight">
+              <p className="mt-5 font-serif text-[27px] sm:text-[32px] font-bold text-[#DFCEAF] leading-[1.25] tracking-tight">
                 Getting you home — even when the direct train won&apos;t
               </p>
-              <p className="mt-2 text-xs lg:text-sm text-slate-400/90 leading-relaxed hidden lg:block">
+              <p className="mt-3 text-xs lg:text-sm text-slate-400/90 leading-relaxed hidden lg:block">
                 Stuck on a train waitlist? We look beyond the direct queue to discover confirmed split-ticket quotas and alternate station connections.
               </p>
             </header>
@@ -406,7 +406,7 @@ export default function HomePage() {
           </div>
 
           {/* ── Right Column (lg:col-span-7): Intent Box & Quick Start Chips ───── */}
-          <div className="lg:col-span-7 mt-4 lg:mt-0 lg:max-w-[560px]">
+          <div className="lg:col-span-7 mt-2 lg:mt-0 lg:max-w-[560px]">
             {/* Non-alarming session reset banner */}
             <AnimatePresence>
               {showSessionNotice && (
@@ -414,7 +414,7 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="mb-3 rounded-xl border border-[#E8A33D]/50 bg-[#E8A33D]/10 p-3.5 flex items-start justify-between gap-3 text-white shadow-[0_0_12px_rgba(232,163,61,0.2)]"
+                  className="mb-4 rounded-xl border border-[#E8A33D]/50 bg-[#E8A33D]/10 p-3.5 flex items-start justify-between gap-3 text-white shadow-[0_0_12px_rgba(232,163,61,0.2)]"
                 >
                   <div className="flex items-start gap-2.5">
                     <Sparkles className="h-4 w-4 text-[#E8A33D] shrink-0 mt-0.5" />
@@ -436,7 +436,7 @@ export default function HomePage() {
             {/* "Ask Anything" Search Input Area */}
             <section className="mt-1">
               <GlowingSectionDivider title="ASK ANYTHING" />
-              <div className="bg-[#050505] rounded-2xl p-4 border border-[#E8A33D]/90 shadow-[0_0_14px_rgba(232,163,61,0.45)] relative flex flex-col justify-between min-h-[120px] transition-all duration-200 hover:shadow-[0_0_20px_rgba(232,163,61,0.65)]">
+              <div className="bg-[#050505] rounded-[20px] p-5 border border-[#E8A33D]/70 shadow-[0_0_16px_rgba(232,163,61,0.25)] relative flex flex-col justify-between min-h-[140px] transition-all duration-200 hover:shadow-[0_0_22px_rgba(232,163,61,0.45)]">
                 <textarea
                   value={input}
                   onChange={(e) => {
@@ -450,42 +450,42 @@ export default function HomePage() {
                     }
                   }}
                   placeholder="e.g. Maa ko Chhath ke liye Patna bhejna hai, 6 November ko"
-                  className="bg-transparent text-sm text-white placeholder:text-slate-500 outline-none w-full pr-14 resize-none leading-relaxed h-20"
+                  className="bg-transparent text-[15px] text-white placeholder:text-slate-500 outline-none w-full pr-14 resize-none leading-relaxed h-[75px]"
                 />
-                <div className="flex items-center justify-between pt-2 border-t border-white/5 mt-1">
-                  <span className="text-[10px] font-mono text-slate-500">
+                <div className="flex items-center justify-between pt-3.5 border-t border-white/5 mt-2">
+                  <span className="text-xs font-mono text-slate-500">
                     Hindi · English · Hinglish
                   </span>
                   <button
                     type="button"
                     onClick={toggleVoice}
                     aria-label={listening ? "Stop voice" : "Start voice"}
-                    className={`h-9 w-9 rounded-full border border-[#E8A33D]/90 shadow-[0_0_12px_rgba(232,163,61,0.5)] flex items-center justify-center transition-all ${
+                    className={`h-11 w-11 rounded-full border border-[#E8A33D]/80 shadow-[0_0_12px_rgba(232,163,61,0.35)] flex items-center justify-center transition-all ${
                       listening
                         ? "bg-[#C0432E] text-white animate-pulse"
                         : "bg-black text-[#E8A33D] hover:bg-[#121212] hover:scale-105"
                     }`}
                   >
-                    {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    {listening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                   </button>
                 </div>
               </div>
 
               {listening && (
-                <p className="mt-2 text-xs text-[#E8A33D] animate-pulse font-mono flex items-center gap-1.5">
+                <p className="mt-2.5 text-xs text-[#E8A33D] animate-pulse font-mono flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-[#E8A33D] animate-ping" />
                   LISTENING — बोलिए...
                 </p>
               )}
-              {inputError && <p className="mt-2 text-xs text-[#E8A33D] font-mono">{inputError}</p>}
+              {inputError && <p className="mt-2.5 text-xs text-[#E8A33D] font-mono">{inputError}</p>}
 
               {/* Search CTA Button */}
-              <div className="mt-4">
+              <div className="mt-5">
                 <button
                   type="button"
                   onClick={() => void handleSearch()}
                   disabled={loading || !input.trim()}
-                  className="flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-[#E8A33D] py-3.5 text-sm font-extrabold text-black shadow-[0_0_18px_rgba(232,163,61,0.5)] transition-all hover:bg-[#F0B250] hover:shadow-[0_0_24px_rgba(232,163,61,0.7)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[16px] bg-[#E8A33D] py-4 text-[15px] font-extrabold text-black shadow-[0_0_20px_rgba(232,163,61,0.45)] transition-all hover:bg-[#F0B250] hover:shadow-[0_0_26px_rgba(232,163,61,0.65)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                 >
                   {loading ? (
                     <>
@@ -497,16 +497,16 @@ export default function HomePage() {
                     </>
                   )}
                 </button>
-                <p className="mt-2 text-center text-[10px] text-slate-500 font-mono">
+                <p className="mt-3 text-center text-[11px] text-slate-500 font-mono tracking-wide">
                   We look beyond direct waitlists to find the best route.
                 </p>
               </div>
             </section>
 
             {/* ── Quick Start 2x3 Grid (Below Search) ────────────────────────── */}
-            <section className="mt-3">
+            <section className="mt-4">
               <GlowingSectionDivider title="QUICK START — TAP TO TRY" />
-              <div className="grid grid-cols-2 gap-3 my-1">
+              <div className="grid grid-cols-2 gap-3.5 my-1">
                 {EXAMPLE_CHIPS.map((chip) => {
                   const Icon = chip.icon;
                   return (
@@ -515,17 +515,17 @@ export default function HomePage() {
                       type="button"
                       onClick={() => void handleSearch(chip.input)}
                       disabled={loading}
-                      className="bg-[#050505] hover:bg-[#0A0A0A] rounded-2xl p-3.5 border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] hover:shadow-[0_0_18px_rgba(232,163,61,0.65),inset_0_0_10px_rgba(232,163,61,0.15)] flex flex-col justify-between cursor-pointer text-left transition-all duration-200 min-h-[92px] active:scale-[0.98]"
+                      className="bg-[#050505] hover:bg-[#0A0A0A] rounded-[18px] p-4 border border-[#E8A33D]/65 shadow-[0_0_12px_rgba(232,163,61,0.2)] hover:border-[#E8A33D] hover:shadow-[0_0_18px_rgba(232,163,61,0.45),inset_0_0_10px_rgba(232,163,61,0.12)] flex flex-col justify-between cursor-pointer text-left transition-all duration-200 min-h-[96px] active:scale-[0.98]"
                     >
                       <div className="flex items-center justify-between w-full">
                         <Icon className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_6px_rgba(232,163,61,0.5)]" />
                         <span className="h-1.5 w-1.5 rounded-full bg-[#E8A33D]/40" />
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-white leading-tight mt-1.5">
+                        <p className="font-bold text-[13px] text-white leading-tight mt-2.5">
                           {chip.label}
                         </p>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5 leading-tight">
+                        <p className="text-[10px] text-slate-400 font-mono mt-1 leading-tight">
                           {chip.sublabel}
                         </p>
                       </div>
