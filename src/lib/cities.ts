@@ -9,14 +9,14 @@ export type CityEntry = {
 
 export const CITIES: CityEntry[] = [
   // ── Metro & Major Hubs ───────────────────────────────────────────────────
-  { name: "Delhi", stationCode: "NDLS", lat: 28.64, lon: 77.22, isJunction: true, aliases: ["New Delhi", "Dilli", "दिल्ली", "dilli", "नई दिल्ली", "delhi", "old delhi", "nizamuddin", "anand vihar"] },
-  { name: "Mumbai", stationCode: "BCT", lat: 18.94, lon: 72.83, isJunction: true, aliases: ["Bombay", "Mumbai Central", "CSMT", "Dadar", "मुंबई", "munbaee", "bombaee", "mumbai", "bombay", "bandra", "lokmanya tilak", "kurla"] },
-  { name: "Bengaluru", stationCode: "SBC", lat: 12.98, lon: 77.57, isJunction: true, aliases: ["Bangalore", "Banglore", "Bengalore", "बेंगलुरु", "बैंगलोर", "bengaluru", "bangalore", "yeshvantpur", "yeshwanthpur", "krishnarajapuram", "whitefield"] },
+  { name: "Delhi", stationCode: "NDLS", lat: 28.64, lon: 77.22, isJunction: true, aliases: ["New Delhi", "Dilli", "Dehli", "Delhy", "दिल्ली", "dehli", "dilli", "नई दिल्ली", "delhi", "old delhi", "nizamuddin", "anand vihar"] },
+  { name: "Mumbai", stationCode: "BCT", lat: 18.94, lon: 72.83, isJunction: true, aliases: ["Bombay", "Bombey", "Bambay", "Mumbai Central", "CSMT", "Dadar", "मुंबई", "munbaee", "bombaee", "mumbai", "bombay", "bombey", "bambay", "bandra", "lokmanya tilak", "kurla"] },
+  { name: "Bengaluru", stationCode: "SBC", lat: 12.98, lon: 77.57, isJunction: true, aliases: ["Bangalore", "Banglore", "Bengalore", "Bangaluru", "बेंगलुरु", "बैंगलोर", "bengaluru", "bangalore", "banglore", "yeshvantpur", "yeshwanthpur", "krishnarajapuram", "whitefield"] },
   { name: "Chennai", stationCode: "MAS", lat: 13.08, lon: 80.27, isJunction: true, aliases: ["Madras", "चेन्नई", "मद्रास", "chennai", "madras", "egmore", "chennai central", "tambaram"] },
-  { name: "Kolkata", stationCode: "HWH", lat: 22.58, lon: 88.34, isJunction: true, aliases: ["Calcutta", "Howrah", "Sealdah", "कोलकाता", "कलकत्ता", "हावड़ा", "kolakata", "kolkata", "sealdah", "shalimar"] },
-  { name: "Hyderabad", stationCode: "HYB", lat: 17.39, lon: 78.49, isJunction: true, aliases: ["Secunderabad", "Kacheguda", "हैदराबाद", "सिकंदराबाद", "haidarabad", "hyderabad", "secunderabad"] },
+  { name: "Kolkata", stationCode: "HWH", lat: 22.58, lon: 88.34, isJunction: true, aliases: ["Calcutta", "Calcuta", "Howrah", "Sealdah", "कोलकाता", "कलकत्ता", "हावड़ा", "kolakata", "kolkata", "calcuta", "sealdah", "shalimar"] },
+  { name: "Hyderabad", stationCode: "HYB", lat: 17.39, lon: 78.49, isJunction: true, aliases: ["Secunderabad", "Kacheguda", "हैदराबाद", "सिकंदराबाद", "haidarabad", "hyderabad", "hydrabad", "secunderabad"] },
   { name: "Pune", stationCode: "PUNE", lat: 18.53, lon: 73.87, isJunction: true, aliases: ["Poona", "पुणे", "pune", "poona", "shivajinagar", "hadapsar"] },
-  { name: "Ahmedabad", stationCode: "ADI", lat: 23.02, lon: 72.57, isJunction: true, aliases: ["Amdavad", "Ahmadabad", "अहमदाबाद", "ahamadabad", "ahmedabad", "amdavad", "sabarmati", "kalupur"] },
+  { name: "Ahmedabad", stationCode: "ADI", lat: 23.02, lon: 72.57, isJunction: true, aliases: ["Amdavad", "Ahmadabad", "Ahemdabad", "अहमदाबाद", "ahamadabad", "ahmedabad", "ahemdabad", "amdavad", "sabarmati", "kalupur"] },
   
   // ── North & Jammu / Kashmir ──────────────────────────────────────────────
   { name: "Jammu", stationCode: "JAT", lat: 32.70, lon: 74.87, isJunction: true, aliases: ["Jammu Tawi", "जम्मू", "जम्मू तवी", "jammu", "jammu tawi", "jammutawi"] },
@@ -72,7 +72,7 @@ export const CITIES: CityEntry[] = [
   // ── Maharashtra & Goa ────────────────────────────────────────────────────
   { name: "Nagpur", stationCode: "NGP", lat: 21.15, lon: 79.09, isJunction: true, aliases: ["नागपुर", "nagapur", "nagpur"] },
   { name: "Nashik", stationCode: "NK", lat: 20.00, lon: 73.79, isJunction: false, aliases: ["नासिक", "nashik", "nasik"] },
-  { name: "Goa", stationCode: "MAO", lat: 15.29, lon: 73.96, isJunction: true, aliases: ["Madgaon", "Panaji", "Vasco", "Karmali", "Thivim", "गोवा", "मडगांव", "goa", "madgaon", "panaji", "vasco"] },
+  { name: "Goa", stationCode: "MAO", lat: 15.29, lon: 73.96, isJunction: true, aliases: ["Madgaon", "Margao", "Panaji", "Panjim", "Vasco", "Vasko", "Vasco da Gama", "Vasko da Gama", "Karmali", "Thivim", "गोवा", "मडगांव", "goa", "madgaon", "panaji", "panjim", "vasco", "vasko", "vasco da gama", "vasko da gama"] },
   
   // ── East & North-East ────────────────────────────────────────────────────
   { name: "Bhubaneswar", stationCode: "BBS", lat: 20.30, lon: 85.82, isJunction: true, aliases: ["भुवनेश्वर", "Puri", "bhubaneswar", "puri"] },

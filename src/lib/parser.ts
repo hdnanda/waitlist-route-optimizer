@@ -250,20 +250,96 @@ const DATE_PATTERNS: Array<[RegExp, string]> = [
   [/\b(\d{1,2})[\/\-](\d{1,2})\b/, "$1/$2"],
 ];
 
+function levenshteinDistance(s1: string, s2: string): number {
+  const m = s1.length;
+  const n = s2.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (s1[i - 1] === s2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+  }
+  return dp[m][n];
+}
+
+function normalizePhonetic(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/ph/g, "f")
+    .replace(/ee/g, "i")
+    .replace(/oo/g, "u")
+    .replace(/aa/g, "a")
+    .replace(/k/g, "c")
+    .replace(/w/g, "v")
+    .replace(/sh/g, "s")
+    .replace(/z/g, "j");
+}
+
 function matchCity(text: string): string | null {
+  if (!text || text.trim().length < 2) return null;
   const lower = text.toLowerCase().trim();
-  const city = CITIES.find(
+  const phonetic = normalizePhonetic(lower);
+
+  // 1. Exact match
+  const cityExact = CITIES.find(
     c => c.name.toLowerCase() === lower || c.aliases.some(a => a.toLowerCase() === lower)
   );
-  if (city) return city.name;
+  if (cityExact) return cityExact.name;
   
+  // 2. Substring exact match (e.g. "vasco da gama", "new delhi station")
   for (const c of CITIES) {
     if (lower.includes(c.name.toLowerCase())) return c.name;
     for (const a of c.aliases) {
       if (lower.includes(a.toLowerCase())) return c.name;
     }
   }
-  return null;
+
+  // 3. Phonetic normalized exact / substring match
+  for (const c of CITIES) {
+    const cPhon = normalizePhonetic(c.name);
+    if (phonetic === cPhon || phonetic.includes(cPhon)) return c.name;
+    for (const a of c.aliases) {
+      const aPhon = normalizePhonetic(a);
+      if (phonetic === aPhon || phonetic.includes(aPhon)) return c.name;
+    }
+  }
+
+  // 4. Fuzzy Levenshtein Distance match (for STT speech typos like "vasko", "bambay", "soorat", "dehli")
+  let bestMatch: string | null = null;
+  let highestScore = 0;
+
+  for (const c of CITIES) {
+    const allTerms = [c.name, ...c.aliases];
+    for (const term of allTerms) {
+      const termLower = term.toLowerCase();
+      // Skip terms if character length difference is greater than 2
+      if (Math.abs(lower.length - termLower.length) > 2) continue;
+
+      const distRaw = levenshteinDistance(lower, termLower);
+      const scoreRaw = 1 - distRaw / Math.max(lower.length, termLower.length);
+
+      const distPhon = levenshteinDistance(phonetic, normalizePhonetic(termLower));
+      const scorePhon = 1 - distPhon / Math.max(phonetic.length, normalizePhonetic(termLower).length);
+
+      const score = Math.max(scoreRaw, scorePhon);
+      const minDistance = Math.min(distRaw, distPhon);
+
+      if (score > highestScore && score >= 0.72 && minDistance <= 2) {
+        highestScore = score;
+        bestMatch = c.name;
+      }
+    }
+  }
+
+  return bestMatch;
 }
 
 /**
@@ -470,10 +546,10 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
     if (match && match[1] && match[2]) {
       const rawOrigin = match[1]
         .trim()
-        .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|papa\s+ko|papaji\s+ko|pitaji\s+ko|bhai\s+ko|bhaiya\s+ko|sister\s+ko|didi\s+ko|dost\s+ko|family\s+ko|wife\s+ko|husband\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|पापा\s+को|पिताजी\s+को|भाई\s+को|भैया\s+को|दीदी\s+को|दोस्त\s+को|परिवार\s+को|मुझे|हमे)\s+/i, "");
+        .replace(/^(get|need|book|send|tickets?|ticket|train|trains|from|maa\s+ko|papa\s+ko|papaji\s+ko|pitaji\s+ko|bhai\s+ko|bhaiya\s+ko|sister\s+ko|didi\s+ko|dost\s+ko|family\s+ko|wife\s+ko|husband\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|पापा\s+को|पिताजी\s+को|भाई\s+को|भैया\s+को|दीदी\s+को|दोस्त\s+को|परिवार\s+को|मुझे|हमे)\s+/i, "");
       const rawDest = match[2]
         .trim()
-        .replace(/\s+(bhejna|bhejna\s+hai|bhejo|jana|jana\s+hai|chahiye|tickets?|on|next|ke\s+liye|wala|wali|भेजना|भेजना\s+है|भेजो|जाना|जाना\s+है|चाहिए|के\s+लिए).*$/i, "");
+        .replace(/\s+(bhejna|bhejna\s+hai|bhejo|jana|jana\s+hai|chahiye|tickets?|ticket|train|trains|gadi|gaadi|on|next|ke\s+liye|wala|wali|भेजना|भेजना\s+है|भेजो|जाना|जाना\s+है|चाहिए|के\s+लिए|ट्रेन|गाड़ी|गाड़ी).*$/i, "");
 
       origin = matchCity(rawOrigin);
       destination = matchCity(rawDest);
