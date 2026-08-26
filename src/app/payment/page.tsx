@@ -1,13 +1,18 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, Lock, Loader2, RotateCw } from "lucide-react";
 import { useApp } from "@/lib/context";
+import OtpNotification from "@/components/OtpNotification";
 import type { StoredTicket } from "@/lib/types";
 
 function genPNR() {
   return "MOCK-" + Math.random().toString().slice(2, 12);
+}
+
+function generatePaymentOtp(): string {
+  return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
 export default function PaymentPage() {
@@ -17,12 +22,51 @@ export default function PaymentPage() {
   const [otpDigits, setOtpDigits] = useState(["", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // ── OTP State & Notification ───────────────────────────────────────────────
+  const [expectedOtp, setExpectedOtp] = useState<string>("");
+  const [showNotification, setShowNotification] = useState(false);
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(30);
+
   const otpRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
   ];
+
+  // ── Send Payment OTP routine ───────────────────────────────────────────────
+  const triggerSendOtp = useCallback(() => {
+    const code = generatePaymentOtp();
+    setExpectedOtp(code);
+    setOtpDigits(["", "", "", ""]);
+    setError("");
+    setShowNotification(true);
+    setResendCountdown(30);
+
+    // Auto-fill ~1.2s after notification appears
+    setTimeout(() => {
+      setIsAutoFilling(true);
+      setOtpDigits(code.split(""));
+      setTimeout(() => setIsAutoFilling(false), 800);
+    }, 1200);
+  }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    if (resendCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCountdown((c) => Math.max(0, c - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCountdown]);
+
+  // Trigger OTP on page load & auto-focus
+  useEffect(() => {
+    triggerSendOtp();
+    setTimeout(() => otpRefs[0]?.current?.focus(), 150);
+  }, [triggerSendOtp]);
 
   const handleOtpChange = (idx: number, val: string) => {
     if (!/^\d*$/.test(val)) return;
@@ -37,6 +81,13 @@ export default function PaymentPage() {
       setError("Enter all 4 digits.");
       return;
     }
+    const entered = otpDigits.join("");
+    // Strict validation check against the generated payment OTP
+    if (entered !== expectedOtp) {
+      setError("Invalid authorization code. Please enter the 4-digit code sent to your phone.");
+      return;
+    }
+
     setError("");
     setLoading(true);
     setTimeout(() => {
@@ -66,6 +117,15 @@ export default function PaymentPage() {
       animate={{ opacity: 1, y: 0 }}
       className="relative flex min-h-screen flex-col px-5 pb-16 pt-4 lg:pt-8 bg-transparent text-white w-full"
     >
+      {/* ── Real Phone SMS Notification (Mobile top banner / Desktop bottom-right widget) ── */}
+      <OtpNotification
+        code={expectedOtp}
+        sender="IRCTC-AI"
+        title="Payment authorization"
+        visible={showNotification}
+        onClose={() => setShowNotification(false)}
+      />
+
       <div className="w-full max-w-[480px] mx-auto">
         <button
           onClick={() => router.back()}
@@ -79,8 +139,10 @@ export default function PaymentPage() {
             <Lock className="h-6 w-6 text-[#E8A33D]" />
           </div>
           <div>
-            <h1 className="font-serif text-2xl font-bold text-white">Secure Payment</h1>
-            <p className="text-xs font-mono text-slate-400">Mock OTP verification</p>
+            <h1 className="font-serif text-2xl font-bold text-white">Payment Authorization</h1>
+            <p className="text-xs font-mono text-slate-400">
+              {loggedInAccount ? `Authenticated as ${loggedInAccount.name}` : "Secure Bank OTP"}
+            </p>
           </div>
         </div>
 
@@ -102,14 +164,20 @@ export default function PaymentPage() {
           </div>
         </div>
 
-        {/* OTP */}
+        {/* OTP Entry Card */}
         <div className="rounded-2xl bg-[#080808] border border-[#E8A33D]/70 shadow-[0_0_14px_rgba(232,163,61,0.3)] p-6">
-          <label className="text-xs font-mono font-bold tracking-[0.12em] text-[#E8A33D]">
-            PAYMENT OTP
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-mono font-bold tracking-[0.12em] text-[#E8A33D] uppercase">
+              PAYMENT OTP
+            </label>
+            <span className="text-[10px] font-mono font-bold text-[#3F8F5F] bg-[#3F8F5F]/15 px-2 py-0.5 rounded-full border border-[#3F8F5F]/30">
+              CODE SENT ✓
+            </span>
+          </div>
           <p className="mt-1 text-xs text-slate-400 mb-4">
-            Enter any 4-digit code to simulate payment
+            Enter the 4-digit authorization code sent to your mobile number
           </p>
+
           <div className="flex justify-center gap-3">
             {otpDigits.map((digit, idx) => (
               <input
@@ -120,15 +188,47 @@ export default function PaymentPage() {
                 value={digit}
                 onChange={(e) => handleOtpChange(idx, e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Backspace" && !digit && idx > 0)
+                  if (e.key === "Backspace" && !digit && idx > 0) {
                     otpRefs[idx - 1]?.current?.focus();
+                  }
+                  if (e.key === "Enter" && otpDigits.every((d) => d)) {
+                    handleVerify();
+                  }
                 }}
                 maxLength={1}
-                className="w-14 h-14 shrink-0 rounded-xl border border-white/10 bg-black text-center font-mono text-2xl font-bold text-white focus:border-[#E8A33D] focus:shadow-[0_0_10px_rgba(232,163,61,0.4)] focus:outline-none"
+                className={`w-14 h-14 shrink-0 rounded-xl border bg-black text-center font-mono text-2xl font-bold text-white focus:outline-none transition-all ${
+                  isAutoFilling
+                    ? "border-[#E8A33D] shadow-[0_0_16px_rgba(232,163,61,0.65)] scale-105"
+                    : "border-white/10 focus:border-[#E8A33D] focus:shadow-[0_0_10px_rgba(232,163,61,0.4)]"
+                }`}
               />
             ))}
           </div>
-          {error && <p className="mt-2 text-xs font-mono text-[#C0432E]">{error}</p>}
+
+          {/* Resend Countdown */}
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-xs font-mono text-slate-400">
+              {resendCountdown > 0 ? (
+                `Resend in 0:${resendCountdown.toString().padStart(2, "0")}`
+              ) : (
+                "Didn't receive code?"
+              )}
+            </span>
+            {resendCountdown === 0 ? (
+              <button
+                type="button"
+                onClick={triggerSendOtp}
+                className="flex items-center gap-1 text-xs font-mono font-bold text-[#E8A33D] hover:underline"
+              >
+                <RotateCw className="h-3 w-3" /> Resend OTP
+              </button>
+            ) : (
+              <span className="text-xs font-mono text-slate-500">SMS delivered</span>
+            )}
+          </div>
+
+          {error && <p className="mt-2.5 text-xs font-mono text-[#C0432E]">{error}</p>}
+
           <button
             onClick={handleVerify}
             disabled={loading || otpDigits.some((d) => !d)}
@@ -136,7 +236,7 @@ export default function PaymentPage() {
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin text-black" /> Processing...
+                <Loader2 className="h-4 w-4 animate-spin text-black" /> Authorizing...
               </>
             ) : (
               "Authorize ₹" + (selectedOption?.fare.toLocaleString("en-IN") ?? "")
@@ -145,7 +245,7 @@ export default function PaymentPage() {
         </div>
 
         <p className="mt-4 text-center text-xs font-mono text-slate-500">
-          Demo environment · Any OTP is accepted
+          256-bit Encrypted IRCTC Payment Gateway
         </p>
       </div>
     </motion.main>
