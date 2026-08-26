@@ -59,17 +59,21 @@ export default function ResultsPage() {
   const selectorsRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Engine runner (requires date to run) ───────────────────────────────────
+  // ── Engine runner (requires BOTH date and class to run) ────────────────────
   const runEngine = useCallback((cls?: TrainClass, dateOverride?: string) => {
     if (!parsedIntent || parsedIntent.parseError) return;
     const dateToUse = dateOverride ?? parsedIntent.date;
-    if (!dateToUse) {
+    const classToUse = cls ?? selectedClass ?? parsedIntent.class;
+
+    // Only search/display trains if BOTH date and class are known
+    if (!dateToUse || !classToUse) {
       setResult(null);
       return;
     }
+
     const r = getRankedOptions(
-      { ...parsedIntent, date: dateToUse },
-      cls ?? selectedClass ?? undefined
+      { ...parsedIntent, date: dateToUse, class: classToUse },
+      classToUse
     );
     setResult(r);
   }, [parsedIntent, selectedClass]);
@@ -79,8 +83,10 @@ export default function ResultsPage() {
       if (parsedIntent.class) {
         setLocalClass(parsedIntent.class);
       }
-      if (parsedIntent.date) {
-        runEngine(parsedIntent.class ?? undefined, parsedIntent.date);
+      const hasDate = Boolean(parsedIntent.date);
+      const hasCls = Boolean(parsedIntent.class ?? selectedClass);
+      if (hasDate && hasCls) {
+        runEngine(parsedIntent.class ?? selectedClass ?? undefined, parsedIntent.date ?? undefined);
       } else {
         setResult(null);
       }
@@ -94,8 +100,7 @@ export default function ResultsPage() {
     if (parsedIntent) {
       setParsedIntent({ ...parsedIntent, class: cls });
       if (parsedIntent.date) {
-        const r = getRankedOptions({ ...parsedIntent, class: cls }, cls);
-        setResult(r);
+        runEngine(cls, parsedIntent.date);
       }
     }
 
@@ -117,13 +122,11 @@ export default function ResultsPage() {
 
   const handleClassReset = () => {
     setLocalClass(null);
+    setSelectedClass(null as unknown as TrainClass);
     if (parsedIntent) {
       setParsedIntent({ ...parsedIntent, class: null });
-      if (parsedIntent.date) {
-        const r = getRankedOptions({ ...parsedIntent, class: null }, undefined);
-        setResult(r);
-      }
     }
+    setResult(null); // Gated off until class is chosen again
   };
 
   // ── Date resolution ────────────────────────────────────────────────────────
@@ -131,10 +134,11 @@ export default function ResultsPage() {
     if (!parsedIntent) return;
     const updated = { ...parsedIntent, date: dateStr };
     setParsedIntent(updated);
-    if (dateStr) {
-      runEngine(selectedClass ?? undefined, dateStr);
+    const activeClass = selectedClass ?? parsedIntent.class;
+    if (dateStr && activeClass) {
+      runEngine(activeClass, dateStr);
     } else {
-      setResult(null);
+      setResult(null); // Gated off until both are present
     }
 
     if (dateStr && spotlightMissing?.includes("date")) {
@@ -218,7 +222,11 @@ export default function ResultsPage() {
   }
 
   const hasDate = Boolean(parsedIntent.date);
-  const needsClassSelect = !parsedIntent.class && !selectedClass;
+  const activeClass = selectedClass ?? parsedIntent.class;
+  const hasClass = Boolean(activeClass);
+  const isReady = hasDate && hasClass;
+
+  const needsClassSelect = !hasClass;
   const needsDateSelect = !hasDate;
 
   const quickDates = [
@@ -260,10 +268,15 @@ export default function ResultsPage() {
           <button onClick={() => router.push("/tickets")} className="text-xs text-[#E8A33D] font-mono font-bold tracking-wider hover:underline">MY TICKETS</button>
         </div>
 
+        {/* Status Indicator */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-[10px] font-bold tracking-widest text-[#E8A33D]">
-            {!hasDate
+            {!hasDate && !hasClass
+              ? "SELECT DATE & SEAT CLASS · 2 STEPS REQUIRED"
+              : !hasDate
               ? "SELECT TRAVEL DATE · 1 STEP REQUIRED"
+              : !hasClass
+              ? "SELECT SEAT CLASS · 1 STEP REQUIRED"
               : result
               ? (result.routeFound ? `${result.options.length} ROUTE${result.options.length !== 1 ? "S" : ""} FOUND` : "ROUTE NOT IN DATASET")
               : "SEARCHING AVAILABLE TRAINS"}
@@ -275,9 +288,14 @@ export default function ResultsPage() {
           )}
         </div>
 
+        {/* Dynamic Headline */}
         <h1 className="mt-2 font-serif text-2xl lg:text-3xl font-bold leading-tight text-white">
-          {!hasDate
+          {!hasDate && !hasClass
+            ? "Pick your travel date and preferred seat class to find trains."
+            : !hasDate
             ? "When are you traveling? Pick a date to search trains."
+            : !hasClass
+            ? "Which seat class do you prefer for your journey?"
             : result?.directStatus === "CONFIRMED"
             ? "Direct seat confirmed."
             : result?.routeFound && result.directWL
@@ -312,14 +330,14 @@ export default function ResultsPage() {
               {parsedIntent.date} ✕
             </button>
           )}
-          {(selectedClass ?? parsedIntent.class) && (
+          {activeClass && (
             <button
               type="button"
               onClick={handleClassReset}
               className="rounded-full border border-[#E8A33D]/70 bg-[#E8A33D]/15 px-3 py-1 text-xs font-bold text-[#E8A33D] hover:bg-[#E8A33D]/25 transition font-mono"
               title="Tap to change class"
             >
-              {selectedClass ?? parsedIntent.class} ✕
+              {activeClass} ✕
             </button>
           )}
           <span className={`rounded-full border px-3 py-1 text-[10px] font-mono ${parsedIntent.confidence === "high" ? "border-[#3F8F5F]/50 bg-[#3F8F5F]/15 text-[#3F8F5F] font-bold" : "border-white/10 bg-white/5 text-slate-400"}`}>
@@ -390,7 +408,7 @@ export default function ResultsPage() {
                   </div>
                   {isDateSpotlighted ? (
                     <span className="rounded-full bg-[#E8A33D] text-black px-2.5 py-0.5 text-[9px] font-mono font-extrabold uppercase shadow-[0_0_8px_rgba(232,163,61,0.6)]">
-                      Step 1: Select date
+                      Select date
                     </span>
                   ) : (
                     <span className="rounded-full border border-[#E8A33D]/50 bg-[#E8A33D]/10 px-2 py-0.5 text-[9px] font-mono font-bold text-[#E8A33D]">
@@ -466,12 +484,16 @@ export default function ResultsPage() {
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="h-3.5 w-3.5 text-[#E8A33D]" />
                     <p className="text-xs font-mono font-bold tracking-[0.12em] text-[#E8A33D]">
-                      WHICH CLASS WORKS FOR YOU?
+                      WHICH SEAT CLASS WORKS FOR YOU?
                     </p>
                   </div>
-                  {isClassSpotlighted && (
+                  {isClassSpotlighted ? (
                     <span className="rounded-full bg-[#E8A33D] text-black px-2.5 py-0.5 text-[9px] font-mono font-extrabold uppercase shadow-[0_0_8px_rgba(232,163,61,0.6)]">
-                      {needsDateSelect ? "Step 2: Select class" : "Select class"}
+                      Select class
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-[#E8A33D]/50 bg-[#E8A33D]/10 px-2 py-0.5 text-[9px] font-mono font-bold text-[#E8A33D]">
+                      REQUIRED
                     </span>
                   )}
                 </div>
@@ -493,8 +515,8 @@ export default function ResultsPage() {
           </AnimatePresence>
         </div>
 
-        {/* Unknown route fallback */}
-        {hasDate && result && !result.routeFound && (
+        {/* Unknown route fallback (only when both date and class are selected) */}
+        {isReady && result && !result.routeFound && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 rounded-2xl bg-[#080808] border border-[#E8A33D]/70 shadow-[0_0_12px_rgba(232,163,61,0.3)] p-5">
             <p className="font-mono text-[10px] font-bold text-[#E8A33D] mb-2">ROUTE NOT IN PROTOTYPE</p>
             <p className="text-sm text-slate-300 leading-5">
@@ -510,8 +532,8 @@ export default function ResultsPage() {
           </motion.div>
         )}
 
-        {/* ── Ticket Cards: Stacked on mobile/tablet, 3-column side-by-side grid at lg: ── */}
-        {hasDate && result?.routeFound && result.options.length > 0 && (
+        {/* ── Ticket Cards: ONLY when BOTH seat class and date are selected ── */}
+        {isReady && result?.routeFound && result.options.length > 0 && (
           <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -521,7 +543,7 @@ export default function ResultsPage() {
             <div className="mb-2 mt-1 px-1">
               <p className="text-xs text-slate-400 leading-relaxed font-mono">
                 <span className="text-[#E8A33D] font-bold">SYSTEM LOG: </span> 
-                Analyzed {result.stats?.directAnalyzed ?? 18} direct trains and {result.stats?.splitCombinations ?? 142} intermediate split-route combinations along the {result.originDisplay}–{result.destinationDisplay} corridor for <span className="text-white font-bold">{parsedIntent.date}</span>. Excluded all routes with layovers &gt; {result.stats?.maxLayoverMins ?? 45} mins. Displaying the {result.options.length} highest-probability {result.options.length === 1 ? "option" : "options"}:
+                Analyzed {result.stats?.directAnalyzed ?? 18} direct trains and {result.stats?.splitCombinations ?? 142} intermediate split-route combinations along the {result.originDisplay}–{result.destinationDisplay} corridor for <span className="text-white font-bold">{parsedIntent.date}</span> ({activeClass} class). Excluded all routes with layovers &gt; {result.stats?.maxLayoverMins ?? 45} mins. Displaying the {result.options.length} highest-probability {result.options.length === 1 ? "option" : "options"}:
               </p>
             </div>
 
@@ -534,8 +556,8 @@ export default function ResultsPage() {
           </motion.section>
         )}
 
-        {/* ── How it works panel (Full width below the grid) ────────────────── */}
-        {hasDate && result?.routeFound && (
+        {/* ── How it works panel (Full width below the grid when tickets are active) ── */}
+        {isReady && result?.routeFound && (
           <section className="mt-8 w-full">
             <button onClick={() => setShowHowItWorks((v) => !v)}
               className="flex w-full items-center justify-between rounded-xl bg-[#080808] border border-[#E8A33D]/40 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_0_8px_rgba(232,163,61,0.15)] hover:border-[#E8A33D]">
