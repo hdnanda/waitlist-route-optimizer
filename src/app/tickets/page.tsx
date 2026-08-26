@@ -59,14 +59,22 @@ export default function TicketsPage() {
   if (!loggedInAccount) {
     return (
       <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="flex min-h-screen flex-col items-center justify-center px-5 bg-black text-white">
-        <Ticket className="h-12 w-12 text-[#E8A33D]/40 mb-4" />
-        <p className="text-white font-semibold mb-1 text-center">Sign in to view your tickets</p>
-        <p className="text-xs text-slate-400 mb-6 text-center">Login is available when you tap Book on a confirmed route</p>
-        <button onClick={() => router.push("/")} className="rounded-xl bg-[#E8A33D] px-6 py-3 text-sm font-extrabold text-black shadow-[0_0_14px_rgba(232,163,61,0.45)]">← Search routes</button>
+        className="flex min-h-screen flex-col items-center justify-center px-5 bg-black text-white text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[#E8A33D]/40 bg-[#E8A33D]/10 mb-4 shadow-[0_0_20px_rgba(232,163,61,0.2)]">
+          <Ticket className="h-8 w-8 text-[#E8A33D]/70" />
+        </div>
+        <p className="text-white font-bold text-lg mb-1">You are not signed in</p>
+        <p className="text-sm text-slate-400 mb-1 max-w-[260px] leading-relaxed">
+          Sign in to view your tickets.
+        </p>
+        <p className="text-xs text-slate-500 mb-6 max-w-[260px] leading-relaxed">
+          Your sign-in happens automatically when you book a confirmed route.
+        </p>
+        <button onClick={() => router.push("/")} className="rounded-xl bg-[#E8A33D] px-6 py-3 text-sm font-extrabold text-black shadow-[0_0_14px_rgba(232,163,61,0.45)] hover:bg-[#F0B250] transition">← Search routes</button>
       </motion.main>
     );
   }
+
 
   const tickets = loggedInAccount.tickets;
 

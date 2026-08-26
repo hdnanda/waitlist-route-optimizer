@@ -62,6 +62,9 @@ type Action =
   | { type: "SET_OPTION"; payload: ReasonedOption }
   | { type: "SET_CLASS"; payload: TrainClass }
   | { type: "SET_ACCOUNT"; payload: Account }
+  // SEED_ACCOUNTS populates the accounts list only — never auto-signs anyone in
+  | { type: "SEED_ACCOUNTS"; payload: Account[] }
+  // REGISTER_ACCOUNT registers AND signs in (explicit user action only)
   | { type: "REGISTER_ACCOUNT"; payload: Account }
   | { type: "SET_BOOKING"; payload: StoredTicket }
   | { type: "ADD_TICKET"; payload: StoredTicket }
@@ -76,8 +79,23 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_CLASS":
       return { ...state, selectedClass: action.payload };
     case "SET_ACCOUNT":
+      // Explicit login — sets loggedInAccount
       return { ...state, loggedInAccount: action.payload };
+    case "SEED_ACCOUNTS": {
+      // Merges incoming accounts into the accounts list WITHOUT changing loggedInAccount
+      const merged = [...state.accounts];
+      for (const incoming of action.payload) {
+        const idx = merged.findIndex((a) => a.mobileLast4 === incoming.mobileLast4);
+        if (idx >= 0) {
+          merged[idx] = incoming;
+        } else {
+          merged.push(incoming);
+        }
+      }
+      return { ...state, accounts: merged };
+    }
     case "REGISTER_ACCOUNT": {
+      // Called only on explicit sign-up — adds to accounts AND signs in
       const exists = state.accounts.some((a) => a.mobileLast4 === action.payload.mobileLast4);
       const accounts = exists
         ? state.accounts.map((a) => (a.mobileLast4 === action.payload.mobileLast4 ? action.payload : a))
@@ -104,12 +122,12 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-function loadAccounts(): Account[] {
+function loadAccounts(): Account[] | null {
   try {
     const raw = sessionStorage.getItem("railpravesh_accounts");
     if (raw) return JSON.parse(raw) as Account[];
   } catch {}
-  return HARDCODED_ACCOUNTS.map((a) => ({ ...a, tickets: [...a.tickets] }));
+  return null;
 }
 
 function saveAccounts(accounts: Account[]) {
@@ -137,18 +155,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     parsedIntent: null,
     selectedOption: null,
     selectedClass: null,
-    loggedInAccount: null,
+    loggedInAccount: null,  // Always starts as null — user must explicitly sign in
     accounts: HARDCODED_ACCOUNTS.map((a) => ({ ...a, tickets: [...a.tickets] })),
     currentBooking: null,
   });
 
+  // On mount: hydrate accounts list from sessionStorage (no auto-login)
   useEffect(() => {
     const stored = loadAccounts();
     if (stored && stored.length > 0) {
-      stored.forEach((acc) => dispatch({ type: "REGISTER_ACCOUNT", payload: acc }));
+      dispatch({ type: "SEED_ACCOUNTS", payload: stored });
     }
   }, []);
 
+  // Persist accounts whenever they change
   useEffect(() => {
     saveAccounts(state.accounts);
   }, [state.accounts]);
@@ -156,7 +176,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setParsedIntent = (intent: ParsedIntent) => dispatch({ type: "SET_INTENT", payload: intent });
   const setSelectedOption = (option: ReasonedOption) => dispatch({ type: "SET_OPTION", payload: option });
   const setSelectedClass = (cls: TrainClass) => dispatch({ type: "SET_CLASS", payload: cls });
+  // setLoggedInAccount is called after successful OTP — explicit login
   const setLoggedInAccount = (account: Account) => dispatch({ type: "SET_ACCOUNT", payload: account });
+  // registerAccount is called for new sign-ups — also signs in
   const registerAccount = (account: Account) => dispatch({ type: "REGISTER_ACCOUNT", payload: account });
   const addTicket = (ticket: StoredTicket) => dispatch({ type: "ADD_TICKET", payload: ticket });
   const setCurrentBooking = (ticket: StoredTicket) => dispatch({ type: "SET_BOOKING", payload: ticket });

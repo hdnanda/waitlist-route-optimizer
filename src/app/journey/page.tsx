@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Bell, BellOff, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, AlertTriangle, CheckCircle2, Clock, Activity } from "lucide-react";
 import { useApp } from "@/lib/context";
 
 function calculateLayover(arr: string, dep: string): string | null {
@@ -33,12 +33,22 @@ export default function JourneyPage() {
 
   if (!currentBooking) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-5 bg-black text-white">
-        <p className="text-slate-400 mb-4 font-mono text-sm">No active journey found.</p>
-        <button onClick={() => router.push("/")} className="rounded-xl bg-[#E8A33D] px-6 py-3 text-sm font-extrabold text-black shadow-[0_0_14px_rgba(232,163,61,0.45)]">← Home</button>
+      <div className="flex min-h-screen flex-col items-center justify-center px-5 bg-black text-white text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[#E8A33D]/40 bg-[#E8A33D]/10 mb-4 shadow-[0_0_20px_rgba(232,163,61,0.2)]">
+          <Activity className="h-8 w-8 text-[#E8A33D]/70" />
+        </div>
+        <p className="text-white font-bold text-lg mb-1">No active journey</p>
+        <p className="text-sm text-slate-400 mb-1 max-w-[260px] leading-relaxed">
+          You are not signed in.
+        </p>
+        <p className="text-xs text-slate-500 mb-6 max-w-[260px] leading-relaxed">
+          Book a confirmed route to track your journey status here.
+        </p>
+        <button onClick={() => router.push("/")} className="rounded-xl bg-[#E8A33D] px-6 py-3 text-sm font-extrabold text-black shadow-[0_0_14px_rgba(232,163,61,0.45)] hover:bg-[#F0B250] transition">← Find a route</button>
       </div>
     );
   }
+
 
   const isSplit = currentBooking.isSplit;
   const isTwoDifferentTrains = Boolean(
