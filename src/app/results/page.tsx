@@ -59,9 +59,19 @@ export default function ResultsPage() {
   const selectorsRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
-  const runEngine = useCallback((cls?: TrainClass) => {
+  // ── Engine runner (requires date to run) ───────────────────────────────────
+  const runEngine = useCallback((cls?: TrainClass, dateOverride?: string) => {
     if (!parsedIntent || parsedIntent.parseError) return;
-    const r = getRankedOptions(parsedIntent, cls ?? selectedClass ?? undefined);
+    const dateToUse = dateOverride ?? parsedIntent.date;
+    // Only search/display trains if date is known
+    if (!dateToUse) {
+      setResult(null);
+      return;
+    }
+    const r = getRankedOptions(
+      { ...parsedIntent, date: dateToUse },
+      cls ?? selectedClass ?? undefined
+    );
     setResult(r);
   }, [parsedIntent, selectedClass]);
 
@@ -69,9 +79,11 @@ export default function ResultsPage() {
     if (parsedIntent && !parsedIntent.parseError) {
       if (parsedIntent.class) {
         setLocalClass(parsedIntent.class);
-        runEngine(parsedIntent.class);
+      }
+      if (parsedIntent.date) {
+        runEngine(parsedIntent.class ?? undefined, parsedIntent.date);
       } else {
-        runEngine();
+        setResult(null);
       }
     }
   }, [parsedIntent]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -82,9 +94,11 @@ export default function ResultsPage() {
     setSelectedClass(cls);
     if (parsedIntent) {
       setParsedIntent({ ...parsedIntent, class: cls });
+      if (parsedIntent.date) {
+        const r = getRankedOptions({ ...parsedIntent, class: cls }, cls);
+        setResult(r);
+      }
     }
-    const r = getRankedOptions(parsedIntent!, cls);
-    setResult(r);
 
     // If currently spotlighting, check if this was a missing field
     if (spotlightMissing?.includes("class")) {
@@ -107,8 +121,11 @@ export default function ResultsPage() {
     setLocalClass(null);
     if (parsedIntent) {
       setParsedIntent({ ...parsedIntent, class: null });
+      if (parsedIntent.date) {
+        const r = getRankedOptions({ ...parsedIntent, class: null }, undefined);
+        setResult(r);
+      }
     }
-    setResult(null);
   };
 
   // ── Date resolution ────────────────────────────────────────────────────────
@@ -116,7 +133,11 @@ export default function ResultsPage() {
     if (!parsedIntent) return;
     const updated = { ...parsedIntent, date: dateStr };
     setParsedIntent(updated);
-    runEngine(selectedClass ?? undefined);
+    if (dateStr) {
+      runEngine(selectedClass ?? undefined, dateStr);
+    } else {
+      setResult(null);
+    }
 
     // If currently spotlighting, check if this was a missing field
     if (dateStr && spotlightMissing?.includes("date")) {
@@ -198,8 +219,9 @@ export default function ResultsPage() {
     );
   }
 
+  const hasDate = Boolean(parsedIntent.date);
   const needsClassSelect = !parsedIntent.class && !selectedClass;
-  const needsDateSelect = !parsedIntent.date;
+  const needsDateSelect = !hasDate;
 
   const quickDates = [
     { label: "Today", value: formatQuickDate(0) },
@@ -239,7 +261,11 @@ export default function ResultsPage() {
 
       <div className="flex items-center gap-2 flex-wrap">
         <span className="font-mono text-[10px] font-bold tracking-widest text-[#E8A33D]">
-          {result ? (result.routeFound ? `${result.options.length} ROUTE${result.options.length !== 1 ? "S" : ""} FOUND` : "ROUTE NOT IN DATASET") : "ROUTE ENGINE / RUNNING"}
+          {!hasDate
+            ? "SELECT TRAVEL DATE · 1 STEP REQUIRED"
+            : result
+            ? (result.routeFound ? `${result.options.length} ROUTE${result.options.length !== 1 ? "S" : ""} FOUND` : "ROUTE NOT IN DATASET")
+            : "SEARCHING AVAILABLE TRAINS"}
         </span>
         {result?.generated && (
           <span className="rounded-full border border-[#E8A33D]/60 bg-[#E8A33D]/15 px-2 py-0.5 text-[10px] font-mono font-bold text-[#E8A33D]">
@@ -249,7 +275,9 @@ export default function ResultsPage() {
       </div>
 
       <h1 className="mt-2 font-serif text-2xl font-bold leading-8 text-white">
-        {result?.directStatus === "CONFIRMED"
+        {!hasDate
+          ? "When are you traveling? Pick a date to search trains."
+          : result?.directStatus === "CONFIRMED"
           ? "Direct seat confirmed."
           : result?.routeFound && result.directWL
           ? `Direct train is WL ${result.directWL}. Here's the full ladder:`
@@ -359,9 +387,13 @@ export default function ResultsPage() {
                     WHEN DO YOU WANT TO TRAVEL?
                   </p>
                 </div>
-                {isDateSpotlighted && (
+                {isDateSpotlighted ? (
                   <span className="rounded-full bg-[#E8A33D] text-black px-2.5 py-0.5 text-[9px] font-mono font-extrabold uppercase shadow-[0_0_8px_rgba(232,163,61,0.6)]">
                     Step 1: Select date
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-[#E8A33D]/50 bg-[#E8A33D]/10 px-2 py-0.5 text-[9px] font-mono font-bold text-[#E8A33D]">
+                    REQUIRED
                   </span>
                 )}
               </div>
@@ -460,8 +492,8 @@ export default function ResultsPage() {
         </AnimatePresence>
       </div>
 
-      {/* Unknown route fallback */}
-      {result && !result.routeFound && (
+      {/* Unknown route fallback (only if date is known) */}
+      {hasDate && result && !result.routeFound && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 rounded-2xl bg-[#080808] border border-[#E8A33D]/70 shadow-[0_0_12px_rgba(232,163,61,0.3)] p-5">
           <p className="font-mono text-[10px] font-bold text-[#E8A33D] mb-2">ROUTE NOT IN PROTOTYPE</p>
           <p className="text-sm text-slate-300 leading-5">
@@ -477,28 +509,28 @@ export default function ResultsPage() {
         </motion.div>
       )}
 
-      {/* Ticket cards */}
-      {result?.routeFound && result.options.length > 0 && (
-        <section className="mt-5 space-y-4">
-          <motion.div 
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mb-2 mt-1 px-1"
-          >
+      {/* Ticket cards (ONLY when date is known) */}
+      {hasDate && result?.routeFound && result.options.length > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="mt-5 space-y-4"
+        >
+          <div className="mb-2 mt-1 px-1">
             <p className="text-xs text-slate-400 leading-relaxed font-mono">
               <span className="text-[#E8A33D] font-bold">SYSTEM LOG: </span> 
-              Analyzed {result.stats?.directAnalyzed ?? 18} direct trains and {result.stats?.splitCombinations ?? 142} intermediate split-route combinations along the {result.originDisplay}–{result.destinationDisplay} corridor. Excluded all routes with layovers &gt; {result.stats?.maxLayoverMins ?? 45} mins. Displaying the {result.options.length} highest-probability {result.options.length === 1 ? "option" : "options"}:
+              Analyzed {result.stats?.directAnalyzed ?? 18} direct trains and {result.stats?.splitCombinations ?? 142} intermediate split-route combinations along the {result.originDisplay}–{result.destinationDisplay} corridor for <span className="text-white font-bold">{parsedIntent.date}</span>. Excluded all routes with layovers &gt; {result.stats?.maxLayoverMins ?? 45} mins. Displaying the {result.options.length} highest-probability {result.options.length === 1 ? "option" : "options"}:
             </p>
-          </motion.div>
+          </div>
           {result.options.map((option, i) => (
             <TicketCard key={option.id} option={option} onBook={() => handleBook(option)} index={i} />
           ))}
-        </section>
+        </motion.section>
       )}
 
-      {/* How it works panel */}
-      {result?.routeFound && (
+      {/* How it works panel (only if date is known and routes found) */}
+      {hasDate && result?.routeFound && (
         <section className="mt-6">
           <button onClick={() => setShowHowItWorks((v) => !v)}
             className="flex w-full items-center justify-between rounded-xl bg-[#080808] border border-[#E8A33D]/40 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_0_8px_rgba(232,163,61,0.15)] hover:border-[#E8A33D]">
