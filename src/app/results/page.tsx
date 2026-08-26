@@ -56,7 +56,6 @@ export default function ResultsPage() {
   const [spotlightMissing, setSpotlightMissing] = useState<("class" | "date")[] | null>(null);
   const [pendingBookingOption, setPendingBookingOption] = useState<ReasonedOption | null>(null);
   const [spotlightShakeCount, setSpotlightShakeCount] = useState(0);
-  const [isInitialSpotlightPulse, setIsInitialSpotlightPulse] = useState(false);
   const selectorsRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
@@ -90,7 +89,6 @@ export default function ResultsPage() {
     // If currently spotlighting, check if this was a missing field
     if (spotlightMissing?.includes("class")) {
       const remaining = spotlightMissing.filter((m) => m !== "class");
-      // Check if date is also resolved
       const dateResolved = Boolean(parsedIntent?.date);
       if (remaining.length === 0 || (remaining.length === 1 && remaining[0] === "date" && dateResolved)) {
         setSpotlightMissing(null);
@@ -123,7 +121,6 @@ export default function ResultsPage() {
     // If currently spotlighting, check if this was a missing field
     if (dateStr && spotlightMissing?.includes("date")) {
       const remaining = spotlightMissing.filter((m) => m !== "date");
-      // Check if class is also resolved
       const classResolved = Boolean(selectedClass ?? parsedIntent.class);
       if (remaining.length === 0 || (remaining.length === 1 && remaining[0] === "class" && classResolved)) {
         setSpotlightMissing(null);
@@ -138,7 +135,7 @@ export default function ResultsPage() {
     }
   };
 
-  // ── Hard Booking Guard & Spotlight Trigger (Part 2 & Part 3) ───────────────
+  // ── Hard Booking Guard & Spotlight Trigger ─────────────────────────────────
   const proceedToLogin = (option: ReasonedOption) => {
     setSelectedOption(option);
     router.push("/login");
@@ -147,9 +144,6 @@ export default function ResultsPage() {
   const triggerSpotlight = (missing: ("class" | "date")[], option: ReasonedOption) => {
     setSpotlightMissing(missing);
     setPendingBookingOption(option);
-    setIsInitialSpotlightPulse(true);
-    setTimeout(() => setIsInitialSpotlightPulse(false), 1000);
-    // Smooth scroll to selectors
     setTimeout(() => {
       selectorsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 50);
@@ -166,14 +160,13 @@ export default function ResultsPage() {
     // Hard validation guard: early return if class or date is null
     if (missing.length > 0) {
       triggerSpotlight(missing, option);
-      return; // Real early return — cannot proceed
+      return; // Hard block — cannot proceed without selections
     }
 
     proceedToLogin(option);
   };
 
   const handleBackdropClick = () => {
-    // Tapping on blurred scrim nudges the spotlighted row with a shake
     setSpotlightShakeCount((c) => c + 1);
   };
 
@@ -229,9 +222,9 @@ export default function ResultsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             onClick={handleBackdropClick}
-            className="fixed inset-0 z-40 bg-black/85 backdrop-blur-[6px] cursor-pointer"
+            className="fixed inset-0 z-40 bg-black/85 backdrop-blur-[8px] cursor-pointer"
           />
         )}
       </AnimatePresence>
@@ -308,65 +301,55 @@ export default function ResultsPage() {
       {/* ── Unresolved Selectors Area (Date & Class) ────────────────────────── */}
       <div ref={selectorsRef} className="mt-5 space-y-4">
         {/* Spotlight inline banner prompt */}
-        {spotlightMissing && (
-          <motion.div
-            key={`spotlight-banner-${spotlightShakeCount}`}
-            initial={{ opacity: 0, y: -6 }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              x: spotlightShakeCount > 0 ? [0, -8, 8, -6, 6, -3, 3, 0] : 0,
-            }}
-            transition={{ duration: 0.4 }}
-            className="z-50 relative flex items-center gap-2.5 rounded-xl border border-[#E8A33D] bg-[#0A0A0A] p-3.5 shadow-[0_0_16px_rgba(232,163,61,0.5)]"
-          >
-            <AlertCircle className="h-5 w-5 text-[#E8A33D] shrink-0 animate-pulse" />
-            <div>
-              <p className="text-xs font-mono font-bold text-[#E8A33D] uppercase tracking-wider">
-                Action required to book
-              </p>
-              <p className="text-sm font-semibold text-white mt-0.5">
-                {spotlightMissing.includes("date") && spotlightMissing.includes("class")
-                  ? "Pick a travel date and class to continue"
-                  : spotlightMissing.includes("date")
-                  ? "Pick a travel date to continue"
-                  : "Pick a travel class to continue"}
-              </p>
-            </div>
-          </motion.div>
-        )}
+        <AnimatePresence>
+          {spotlightMissing && (
+            <motion.div
+              key="spotlight-banner"
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                x: spotlightShakeCount > 0 ? [0, -8, 8, -6, 6, -3, 3, 0] : 0,
+              }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="z-50 relative flex items-center gap-2.5 rounded-xl border border-[#E8A33D] bg-[#0A0A0A] p-3.5 shadow-[0_0_20px_rgba(232,163,61,0.5)]"
+            >
+              <AlertCircle className="h-5 w-5 text-[#E8A33D] shrink-0 animate-pulse" />
+              <div>
+                <p className="text-xs font-mono font-bold text-[#E8A33D] uppercase tracking-wider">
+                  Action required to book
+                </p>
+                <p className="text-sm font-semibold text-white mt-0.5">
+                  {spotlightMissing.includes("date") && spotlightMissing.includes("class")
+                    ? "Pick a travel date and class to continue"
+                    : spotlightMissing.includes("date")
+                    ? "Pick a travel date to continue"
+                    : "Pick a travel class to continue"}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* 1. Date selector row */}
         <AnimatePresence>
           {needsDateSelect && (
             <motion.section
-              key={`date-selector-${spotlightShakeCount}`}
-              initial={{ opacity: 0, y: 8 }}
+              key="date-selector"
+              initial={{ opacity: 0, y: 12 }}
               animate={{
                 opacity: 1,
                 y: 0,
                 x: spotlightShakeCount > 0 && isDateSpotlighted ? [0, -8, 8, -6, 6, -3, 3, 0] : 0,
-                boxShadow: isDateSpotlighted
-                  ? isInitialSpotlightPulse
-                    ? ["0 0 12px rgba(232,163,61,0.4)", "0 0 28px rgba(232,163,61,0.85)", "0 0 18px rgba(232,163,61,0.6)"]
-                    : "0 0 20px rgba(232,163,61,0.55), inset 0 0 10px rgba(232,163,61,0.12)"
-                  : !spotlightMissing
-                  ? ["0 0 8px rgba(232,163,61,0.2)", "0 0 16px rgba(232,163,61,0.45)", "0 0 8px rgba(232,163,61,0.2)"]
-                  : "none",
-                borderColor: isDateSpotlighted
-                  ? "rgba(232,163,61,1)"
-                  : !spotlightMissing
-                  ? ["rgba(232,163,61,0.45)", "rgba(232,163,61,0.85)", "rgba(232,163,61,0.45)"]
-                  : "rgba(232,163,61,0.4)",
               }}
-              transition={
-                !spotlightMissing
-                  ? { duration: 2.8, repeat: Infinity, ease: "easeInOut" }
-                  : { duration: isInitialSpotlightPulse ? 1 : 0.3 }
-              }
-              exit={{ opacity: 0, height: 0 }}
-              className={`rounded-2xl bg-[#080808] p-4 border ${
-                isDateSpotlighted ? "z-50 relative ring-1 ring-[#E8A33D]" : "relative"
+              exit={{ opacity: 0, y: -12, height: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`rounded-2xl p-4 transition-all duration-300 ${
+                isDateSpotlighted
+                  ? "z-50 relative bg-[#0A0A0A] border-2 border-[#E8A33D] shadow-[0_0_24px_rgba(232,163,61,0.55),inset_0_0_12px_rgba(232,163,61,0.1)] ring-1 ring-[#E8A33D]"
+                  : "relative bg-[#080808] border border-[#E8A33D]/60 shadow-[0_0_10px_rgba(232,163,61,0.25)]"
               }`}
             >
               <div className="flex items-center justify-between mb-2.5">
@@ -377,8 +360,8 @@ export default function ResultsPage() {
                   </p>
                 </div>
                 {isDateSpotlighted && (
-                  <span className="rounded-full bg-[#E8A33D] text-black px-2 py-0.5 text-[9px] font-mono font-extrabold uppercase">
-                    Select date
+                  <span className="rounded-full bg-[#E8A33D] text-black px-2.5 py-0.5 text-[9px] font-mono font-extrabold uppercase shadow-[0_0_8px_rgba(232,163,61,0.6)]">
+                    Step 1: Select date
                   </span>
                 )}
               </div>
@@ -431,33 +414,19 @@ export default function ResultsPage() {
         <AnimatePresence>
           {needsClassSelect && (
             <motion.section
-              key={`class-selector-${spotlightShakeCount}`}
-              initial={{ opacity: 0, y: 8 }}
+              key="class-selector"
+              initial={{ opacity: 0, y: 12 }}
               animate={{
                 opacity: 1,
                 y: 0,
                 x: spotlightShakeCount > 0 && isClassSpotlighted ? [0, -8, 8, -6, 6, -3, 3, 0] : 0,
-                boxShadow: isClassSpotlighted
-                  ? isInitialSpotlightPulse
-                    ? ["0 0 12px rgba(232,163,61,0.4)", "0 0 28px rgba(232,163,61,0.85)", "0 0 18px rgba(232,163,61,0.6)"]
-                    : "0 0 20px rgba(232,163,61,0.55), inset 0 0 10px rgba(232,163,61,0.12)"
-                  : !spotlightMissing
-                  ? ["0 0 8px rgba(232,163,61,0.2)", "0 0 16px rgba(232,163,61,0.45)", "0 0 8px rgba(232,163,61,0.2)"]
-                  : "none",
-                borderColor: isClassSpotlighted
-                  ? "rgba(232,163,61,1)"
-                  : !spotlightMissing
-                  ? ["rgba(232,163,61,0.45)", "rgba(232,163,61,0.85)", "rgba(232,163,61,0.45)"]
-                  : "rgba(232,163,61,0.4)",
               }}
-              transition={
-                !spotlightMissing
-                  ? { duration: 2.8, repeat: Infinity, ease: "easeInOut" }
-                  : { duration: isInitialSpotlightPulse ? 1 : 0.3 }
-              }
-              exit={{ opacity: 0, height: 0 }}
-              className={`rounded-2xl bg-[#080808] p-4 border ${
-                isClassSpotlighted ? "z-50 relative ring-1 ring-[#E8A33D]" : "relative"
+              exit={{ opacity: 0, y: -12, height: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`rounded-2xl p-4 transition-all duration-300 ${
+                isClassSpotlighted
+                  ? "z-50 relative bg-[#0A0A0A] border-2 border-[#E8A33D] shadow-[0_0_24px_rgba(232,163,61,0.55),inset_0_0_12px_rgba(232,163,61,0.1)] ring-1 ring-[#E8A33D]"
+                  : "relative bg-[#080808] border border-[#E8A33D]/60 shadow-[0_0_10px_rgba(232,163,61,0.25)]"
               }`}
             >
               <div className="flex items-center justify-between mb-2.5">
@@ -468,8 +437,8 @@ export default function ResultsPage() {
                   </p>
                 </div>
                 {isClassSpotlighted && (
-                  <span className="rounded-full bg-[#E8A33D] text-black px-2 py-0.5 text-[9px] font-mono font-extrabold uppercase">
-                    Select class
+                  <span className="rounded-full bg-[#E8A33D] text-black px-2.5 py-0.5 text-[9px] font-mono font-extrabold uppercase shadow-[0_0_8px_rgba(232,163,61,0.6)]">
+                    {needsDateSelect ? "Step 2: Select class" : "Select class"}
                   </span>
                 )}
               </div>
