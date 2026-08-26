@@ -15,6 +15,7 @@ import {
 import { getRankedOptions } from "@/lib/engine";
 import { useApp } from "@/lib/context";
 import TicketCard from "@/components/TicketCard";
+import CustomDatePickerModal from "@/components/CustomDatePickerModal";
 import type { TrainClass, ReasonedOption, RouteResult } from "@/lib/types";
 
 const CLASS_OPTIONS: TrainClass[] = ["SL", "3A", "2A", "1A"];
@@ -32,18 +33,6 @@ function formatQuickDate(daysAhead: number): string {
   return `${day} ${month}`;
 }
 
-function formatPickedDate(isoDateStr: string): string {
-  if (!isoDateStr) return "";
-  const parts = isoDateStr.split("-");
-  if (parts.length === 3) {
-    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-    const day = d.getDate();
-    const month = d.toLocaleString("en-US", { month: "short" });
-    return `${day} ${month}`;
-  }
-  return isoDateStr;
-}
-
 export default function ResultsPage() {
   const router = useRouter();
   const { state, setParsedIntent, setSelectedOption, setSelectedClass } = useApp();
@@ -52,13 +41,13 @@ export default function ResultsPage() {
   const [selectedClass, setLocalClass] = useState<TrainClass | null>(parsedIntent?.class ?? null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
 
   // ── Spotlight Focus State ──────────────────────────────────────────────────
   const [spotlightMissing, setSpotlightMissing] = useState<("class" | "date")[] | null>(null);
   const [pendingBookingOption, setPendingBookingOption] = useState<ReasonedOption | null>(null);
   const [spotlightShakeCount, setSpotlightShakeCount] = useState(0);
   const selectorsRef = useRef<HTMLDivElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // ── Engine runner (requires BOTH date and class to run) ────────────────────
   const runEngine = useCallback((cls?: TrainClass, dateOverride?: string) => {
@@ -433,29 +422,15 @@ export default function ResultsPage() {
                     </button>
                   ))}
 
-                  {/* "Pick a date" native picker chip */}
-                  <label className="relative flex items-center gap-2 rounded-xl border border-[#E8A33D]/60 bg-[#080808] px-3.5 py-2.5 text-xs font-bold text-[#E8A33D] min-h-[44px] hover:border-[#E8A33D] hover:shadow-[0_0_12px_rgba(232,163,61,0.4)] transition cursor-pointer active:scale-[0.97]">
-                    <Calendar className="h-4 w-4 text-[#E8A33D] pointer-events-none shrink-0" />
-                    <span className="pointer-events-none">Pick a date</span>
-                    <input
-                      ref={dateInputRef}
-                      type="date"
-                      min={new Date().toISOString().split("T")[0]}
-                      onClick={(e) => {
-                        try {
-                          (e.target as HTMLInputElement).showPicker?.();
-                        } catch {}
-                      }}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          const formatted = formatPickedDate(e.target.value);
-                          handleDateChange(formatted);
-                        }
-                      }}
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20"
-                      title="Pick travel date"
-                    />
-                  </label>
+                  {/* "Pick a date" custom modal trigger chip */}
+                  <button
+                    type="button"
+                    onClick={() => setShowDatePickerModal(true)}
+                    className="rounded-xl border border-[#E8A33D]/60 bg-[#080808] px-3.5 py-2.5 text-xs font-bold text-[#E8A33D] min-h-[44px] hover:border-[#E8A33D] hover:shadow-[0_0_12px_rgba(232,163,61,0.4)] transition flex items-center gap-2 active:scale-[0.97]"
+                  >
+                    <Calendar className="h-4 w-4 text-[#E8A33D] shrink-0" />
+                    <span>Pick a date</span>
+                  </button>
                 </div>
               </motion.section>
             )}
@@ -641,6 +616,14 @@ export default function ResultsPage() {
           ← Start a new search
         </button>
       </div>
+
+      {/* ── Custom Luxury Date Picker Modal ──────────────────────────────────── */}
+      <CustomDatePickerModal
+        isOpen={showDatePickerModal}
+        onClose={() => setShowDatePickerModal(false)}
+        onSelectDate={(formattedDate) => handleDateChange(formattedDate)}
+        selectedDate={parsedIntent?.date}
+      />
     </motion.main>
   );
 }
