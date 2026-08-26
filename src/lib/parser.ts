@@ -98,24 +98,48 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
   // ── Step 1: Strip class codes before city regex (integration fix) ─────────
   const { trainClass, cleaned } = stripClassFromText(preCleaned);
 
-  // ── Step 2: Original Codex regex with Hindi preposition support ─────────
-  const match = cleaned.match(
-    /(?:from\s+|से\s+)?([A-Za-z\u0900-\u097F\s]+?)\s+(?:to|se|towards|tak|से|तक)\s+([A-Za-z\u0900-\u097F\s]+?)(?:\s+(?:on|next|for|ko|during|ke\s+liye|को|के\s+लिए|पर)\s+|$)/i
+  // ── Step 2: Check for inverted Hindi syntax: "[Dest] bhejna hai [Origin] se" ──
+  const invertedMatch = cleaned.match(
+    /([A-Za-z\u0900-\u097F\s]+?)\s+(?:bhejna|jana|jaana|chahiye|भेजना|जाना|चाहिए).*?\s+([A-Za-z\u0900-\u097F\s]+?)\s+(?:se|से)\b/i
   );
 
   let origin: string | null = null;
   let destination: string | null = null;
 
-  if (match && match[1] && match[2]) {
-    const rawOrigin = match[1]
+  if (invertedMatch && invertedMatch[1] && invertedMatch[2]) {
+    const rawDest = invertedMatch[1]
       .trim()
-      .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|मुझे)\s+/i, "");
-    const rawDest = match[2]
+      .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|papa\s+ko|papaji\s+ko|pitaji\s+ko|bhai\s+ko|bhaiya\s+ko|sister\s+ko|didi\s+ko|dost\s+ko|family\s+ko|wife\s+ko|husband\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|पापा\s+को|पिताजी\s+को|भाई\s+को|भैया\s+को|दीदी\s+को|दोस्त\s+को|परिवार\s+को|मुझे|हमे)\s+/i, "")
+      .replace(/\s+(ke\s+liye|के\s+लिए).*$/i, "");
+    const rawOrigin = invertedMatch[2]
       .trim()
-      .replace(/\s+(bhejna|jana|chahiye|tickets?|on|next|ke\s+liye|wala|wali|भेजना|जाना|चाहिए|के\s+लिए).*$/i, "");
+      .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|papa\s+ko|papaji\s+ko|pitaji\s+ko|bhai\s+ko|bhaiya\s+ko|sister\s+ko|didi\s+ko|dost\s+ko|family\s+ko|wife\s+ko|husband\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|पापा\s+को|पिताजी\s+को|भाई\s+को|भैया\s+को|दीदी\s+को|दोस्त\s+को|परिवार\s+को|मुझे|हमे)\s+/i, "");
 
-    origin = matchCity(rawOrigin);
-    destination = matchCity(rawDest);
+    const o = matchCity(rawOrigin);
+    const d = matchCity(rawDest);
+    if (o && d && o.toLowerCase() !== d.toLowerCase()) {
+      origin = o;
+      destination = d;
+    }
+  }
+
+  // ── Step 2b: Standard "Origin to/se Destination" regex ─────────────────────
+  if (!origin || !destination) {
+    const match = cleaned.match(
+      /(?:from\s+|से\s+)?([A-Za-z\u0900-\u097F\s]+?)\s+(?:to|se|towards|tak|से|तक)\s+([A-Za-z\u0900-\u097F\s]+?)(?:\s+(?:on|next|for|ko|during|ke\s+liye|को|के\s+लिए|पर)\s+|$)/i
+    );
+
+    if (match && match[1] && match[2]) {
+      const rawOrigin = match[1]
+        .trim()
+        .replace(/^(get|need|book|send|tickets?|from|maa\s+ko|papa\s+ko|papaji\s+ko|pitaji\s+ko|bhai\s+ko|bhaiya\s+ko|sister\s+ko|didi\s+ko|dost\s+ko|family\s+ko|wife\s+ko|husband\s+ko|mujhe|hamein|मां\s+को|माँ\s+को|पापा\s+को|पिताजी\s+को|भाई\s+को|भैया\s+को|दीदी\s+को|दोस्त\s+को|परिवार\s+को|मुझे|हमे)\s+/i, "");
+      const rawDest = match[2]
+        .trim()
+        .replace(/\s+(bhejna|bhejna\s+hai|bhejo|jana|jana\s+hai|chahiye|tickets?|on|next|ke\s+liye|wala|wali|भेजना|भेजना\s+है|भेजो|जाना|जाना\s+है|चाहिए|के\s+लिए).*$/i, "");
+
+      origin = matchCity(rawOrigin);
+      destination = matchCity(rawDest);
+    }
   }
 
   // ── Step 2.5: Dictionary Scan (Using Unified CITIES list) ──
@@ -125,26 +149,34 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
     return CITIES.some(c => c.name.toLowerCase() === l || c.aliases.some(a => a.toLowerCase() === l));
   };
 
-  if (!isCleanLocation(origin) || !isCleanLocation(destination)) {
+  if (!isCleanLocation(origin) || !isCleanLocation(destination) || (origin && destination && origin.toLowerCase() === destination.toLowerCase())) {
     const allNames = CITIES.flatMap(c => [c.name, ...c.aliases]).map(n => n.toLowerCase());
-    // Match whole words or Hindi words
     const locationRegex = new RegExp(`\\b(${allNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
     const matches = Array.from(cleaned.matchAll(locationRegex)).map(m => m[1].toLowerCase());
-    const uniqueLocations = [...new Set(matches)];
+    const matchedCanonical = matches.map(m => matchCity(m) || m).filter(Boolean) as string[];
+    const uniqueLocations = [...new Set(matchedCanonical)];
     
     if (uniqueLocations.length >= 2) {
-      origin = matchCity(uniqueLocations[0]) || uniqueLocations[0];
-      destination = matchCity(uniqueLocations[1]) || uniqueLocations[1];
+      origin = uniqueLocations[0];
+      destination = uniqueLocations[1];
     } else if (uniqueLocations.length === 1) {
-      if (!isCleanLocation(origin)) origin = matchCity(uniqueLocations[0]) || uniqueLocations[0];
-      else if (!isCleanLocation(destination)) destination = matchCity(uniqueLocations[0]) || uniqueLocations[0];
+      // Only 1 distinct city found in text — DO NOT set both origin and destination to the same city!
+      if (isCleanLocation(origin) && origin!.toLowerCase() !== uniqueLocations[0].toLowerCase()) {
+        destination = uniqueLocations[0];
+      } else if (isCleanLocation(destination) && destination!.toLowerCase() !== uniqueLocations[0].toLowerCase()) {
+        origin = uniqueLocations[0];
+      }
     }
   }
 
   if (origin && !isCleanLocation(origin)) origin = origin.charAt(0).toUpperCase() + origin.slice(1);
   if (destination && !isCleanLocation(destination)) destination = destination.charAt(0).toUpperCase() + destination.slice(1);
 
-  // ── Step 3: Date extraction ──
+  // ── Step 3: Reject missing or identical stations ──
+  if (!origin || !destination) return null;
+  if (origin.toLowerCase() === destination.toLowerCase()) return null;
+
+  // ── Step 4: Date extraction ──
   let date: string | null = null;
   for (const [pattern, template] of DATE_PATTERNS) {
     const m = text.match(pattern);
@@ -154,13 +186,13 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
     }
   }
 
-  if (!origin || !destination) return null;
-
   return {
     origin,
     destination,
     date,
-    passengerNote: /मां|माँ|mother|maa/i.test(text) ? "For mother" : null,
+    passengerNote: /मां|माँ|mother|maa|papa|पिताजी|पापा|father/i.test(text)
+      ? /papa|पापा|पिताजी|father/i.test(text) ? "For father" : "For mother"
+      : null,
     class: trainClass,
     confidence: "high",
   };
@@ -177,7 +209,7 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
 
   // ── Cache check ─────────────────────────────────────────────────────────────
   const cached = getCachedIntent(trimmed);
-  if (cached) {
+  if (cached && !cached.parseError && cached.origin && cached.destination && cached.origin.toLowerCase() !== cached.destination.toLowerCase()) {
     console.log("%c⚡ [Parser] Cache Hit:", "color: #38bdf8; font-weight: bold;", cached);
     console.groupEnd();
     return { ...cached, fromCache: true };
@@ -205,7 +237,13 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
 
   let result = await tryApiCall();
 
-  if (result && !result.parseError && result.origin && result.destination) {
+  if (
+    result &&
+    !result.parseError &&
+    result.origin &&
+    result.destination &&
+    result.origin.toLowerCase() !== result.destination.toLowerCase()
+  ) {
     console.log("%c🤖 [Parser] API/OpenAI Model Result:", "color: #10b981; font-weight: bold;", result);
     console.groupEnd();
     setCachedIntent(trimmed, result);
@@ -215,14 +253,19 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
   // ── Client-side deterministic fallback (safety net) ─────────────────────────
   console.log("%c⚙️ [Parser] Running deterministic fallback parser...", "color: #f59e0b;");
   const fallback = deterministicFallback(trimmed);
-  if (fallback) {
+  if (
+    fallback &&
+    fallback.origin &&
+    fallback.destination &&
+    fallback.origin.toLowerCase() !== fallback.destination.toLowerCase()
+  ) {
     console.log("%c✅ [Parser] Fallback Extracted Intent:", "color: #10b981; font-weight: bold;", fallback);
     console.groupEnd();
     setCachedIntent(trimmed, fallback);
     return fallback;
   }
 
-  console.warn("%c⚠️ [Parser] Could not extract valid origin and destination from:", "color: #ef4444; font-weight: bold;", trimmed);
+  console.warn("%c⚠️ [Parser] Could not extract two distinct origin & destination stations from:", "color: #ef4444; font-weight: bold;", trimmed);
   console.groupEnd();
 
   return {

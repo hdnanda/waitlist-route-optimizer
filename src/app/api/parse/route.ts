@@ -86,21 +86,25 @@ export async function POST(req: NextRequest) {
   }
 
   if (parsed && parsed.origin && parsed.destination) {
-    const validClasses = ["1A", "2A", "3A", "SL"];
-    return NextResponse.json({
-      origin: String(parsed.origin ?? ""),
-      destination: String(parsed.destination ?? ""),
-      date: parsed.date ? String(parsed.date) : null,
-      passengerNote: parsed.passengerNote ? String(parsed.passengerNote) : null,
-      class: validClasses.includes(String(parsed.class ?? "")) ? parsed.class : null,
-      confidence: "high",
-      fromCache: false,
-    });
+    const o = String(parsed.origin ?? "").trim();
+    const d = String(parsed.destination ?? "").trim();
+    if (o.toLowerCase() !== d.toLowerCase()) {
+      const validClasses = ["1A", "2A", "3A", "SL"];
+      return NextResponse.json({
+        origin: o,
+        destination: d,
+        date: parsed.date ? String(parsed.date) : null,
+        passengerNote: parsed.passengerNote ? String(parsed.passengerNote) : null,
+        class: validClasses.includes(String(parsed.class ?? "")) ? parsed.class : null,
+        confidence: "high",
+        fromCache: false,
+      });
+    }
   }
 
   // ── Server-side deterministic fallback ────────────────────────────────────
   const fallback = deterministicFallback(input);
-  if (fallback) {
+  if (fallback && fallback.origin && fallback.destination && fallback.origin.toLowerCase() !== fallback.destination.toLowerCase()) {
     return NextResponse.json(fallback);
   }
 

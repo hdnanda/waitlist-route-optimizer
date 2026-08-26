@@ -93,6 +93,15 @@ export default function HomePage() {
       setLoading(true);
       try {
         const intent = await parseIntent(text.trim());
+        if (
+          intent.parseError ||
+          !intent.origin ||
+          !intent.destination ||
+          intent.origin.toLowerCase() === intent.destination.toLowerCase()
+        ) {
+          setInputError("Could not identify both stations. Please specify both origin and destination (e.g. 'Goa to Jhansi').");
+          return;
+        }
         setParsedIntent(intent);
         router.push("/results");
       } catch {
