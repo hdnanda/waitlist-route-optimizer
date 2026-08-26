@@ -104,6 +104,67 @@ export default function HomePage() {
     [input, router, setParsedIntent]
   );
 
+  // ── Devanagari → Hinglish transliteration ────────────────────────────────
+  // Maps Devanagari Unicode chars to their closest Roman phonetic equivalent.
+  // This runs client-side, zero dependencies, so Hindi mic input becomes
+  // parser-readable Hinglish (e.g. "मुंबई से दिल्ली" → "Mumbai se Dilli").
+  const devanagariToHinglish = (text: string): string => {
+    const map: Record<string, string> = {
+      // Independent vowels
+      "अ": "a", "आ": "aa", "इ": "i", "ई": "ee", "उ": "u", "ऊ": "oo",
+      "ए": "e", "ऐ": "ai", "ओ": "o", "औ": "au", "ऋ": "ri",
+      "अं": "an", "अः": "ah",
+      // Vowel matras (dependent vowel signs)
+      "ा": "a", "ि": "i", "ी": "ee", "ु": "u", "ू": "oo",
+      "े": "e", "ै": "ai", "ो": "o", "ौ": "au", "ृ": "ri",
+      "ं": "n", "ः": "h", "ँ": "n", "़": "",
+      // Halant (virama — suppresses vowel)
+      "्": "",
+      // Consonants
+      "क": "ka", "ख": "kha", "ग": "ga", "घ": "gha", "ङ": "nga",
+      "च": "cha", "छ": "chha", "ज": "ja", "झ": "jha", "ञ": "nya",
+      "ट": "ta", "ठ": "tha", "ड": "da", "ढ": "dha", "ण": "na",
+      "त": "ta", "थ": "tha", "द": "da", "ध": "dha", "न": "na",
+      "प": "pa", "फ": "pha", "ब": "ba", "भ": "bha", "म": "ma",
+      "य": "ya", "र": "ra", "ल": "la", "व": "va",
+      "श": "sha", "ष": "sha", "स": "sa", "ह": "ha",
+      "क्ष": "ksha", "त्र": "tra", "ज्ञ": "gya",
+      // Nukta (dotted) variants
+      "क़": "qa", "ख़": "kha", "ग़": "ga", "ज़": "za", "ड़": "da",
+      "ढ़": "dha", "फ़": "fa", "य़": "ya",
+      // Digits
+      "०": "0", "१": "1", "२": "2", "३": "3", "४": "4",
+      "५": "5", "६": "6", "७": "7", "८": "8", "९": "9",
+    };
+
+    // Multi-char ligatures first, then single chars
+    const multiChar = ["क्ष", "त्र", "ज्ञ", "अं", "अः"];
+    let result = "";
+    let i = 0;
+    while (i < text.length) {
+      let matched = false;
+      for (const mc of multiChar) {
+        if (text.startsWith(mc, i)) {
+          result += map[mc] ?? mc;
+          i += mc.length;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        const ch = text[i];
+        result += map[ch] ?? ch;
+        i++;
+      }
+    }
+    // Clean up: collapse repeated vowels that over-generate (e.g. "kaa" → "ka")
+    // but preserve intentional doubles like "aa", "ee", "oo"
+    return result
+      .replace(/([aeiou])\1{2,}/gi, "$1$1") // cap triples to doubles
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
   const toggleVoice = () => {
     if (typeof window === "undefined") return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,15 +181,18 @@ export default function HomePage() {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognition = new SR() as any;
+    // hi-IN so speaker can speak Hindi; we transliterate to Hinglish ourselves
     recognition.lang = "hi-IN";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (e: any) => {
-      const transcript = (e.results?.[0]?.[0]?.transcript ?? "") as string;
-      setInput(transcript);
+      const rawTranscript = (e.results?.[0]?.[0]?.transcript ?? "") as string;
+      // Transliterate any Devanagari to Roman Hinglish before parsing
+      const hinglish = devanagariToHinglish(rawTranscript);
+      setInput(hinglish);
       setListening(false);
-      void handleSearch(transcript);
+      void handleSearch(hinglish);
     };
     recognition.onerror = () => {
       setInputError("Voice failed. Please type instead.");
@@ -139,6 +203,7 @@ export default function HomePage() {
     recognition.start();
     setListening(true);
   };
+
 
   return (
     <motion.main
