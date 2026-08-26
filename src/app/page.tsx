@@ -116,13 +116,23 @@ export default function HomePage() {
           !intent.destination ||
           intent.origin.toLowerCase() === intent.destination.toLowerCase()
         ) {
+          const isSameStation = Boolean(
+            intent.origin &&
+            intent.destination &&
+            intent.origin.toLowerCase() === intent.destination.toLowerCase()
+          );
+
+          if (isSameStation) {
+            console.warn(`%c⚠️ [Search Guard] Same station detected: ${intent.origin} -> ${intent.destination}`, "color: #f59e0b; font-weight: bold;");
+            setInputError("You cannot keep the origin and the destination at the same location.");
+            return;
+          }
+
           const reason = !intent.origin && !intent.destination
             ? "Neither origin nor destination could be identified"
             : !intent.origin
             ? "Origin station missing/unrecognized"
-            : !intent.destination
-            ? "Destination station missing/unrecognized"
-            : `Origin and destination are the same station (${intent.origin})`;
+            : "Destination station missing/unrecognized";
 
           console.warn(`%c⚠️ [Search Guard] Search not dispatched: ${reason}`, "color: #f59e0b; font-weight: bold;");
           setInputError("Could not identify both stations. Please specify both origin and destination (e.g. 'Goa to Jhansi').");

@@ -585,9 +585,19 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
   if (origin && !isCleanLocation(origin)) origin = origin.charAt(0).toUpperCase() + origin.slice(1);
   if (destination && !isCleanLocation(destination)) destination = destination.charAt(0).toUpperCase() + destination.slice(1);
 
-  // ── Step 3: Reject missing or identical stations ──
+  // ── Step 3: Handle missing or identical stations ──
   if (!origin || !destination) return null;
-  if (origin.toLowerCase() === destination.toLowerCase()) return null;
+  if (origin.toLowerCase() === destination.toLowerCase()) {
+    return {
+      origin,
+      destination,
+      date: null,
+      passengerNote: null,
+      class: trainClass,
+      confidence: "high",
+      parseError: true,
+    };
+  }
 
   // ── Step 4: Date extraction (Explicit patterns + Semantic / Festival / Relative resolution) ──
   let date: string | null = null;
@@ -668,15 +678,24 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
 
   // ── Client-side deterministic fallback (safety net) ─────────────────────────
   const fallback = deterministicFallback(trimmed);
-  if (
-    fallback &&
-    fallback.origin &&
-    fallback.destination &&
-    fallback.origin.toLowerCase() !== fallback.destination.toLowerCase()
-  ) {
-    logParserDiagnostics(trimmed, fallback, "Deterministic Pattern Parser");
-    setCachedIntent(trimmed, fallback);
-    return fallback;
+  if (fallback) {
+    if (
+      fallback.origin &&
+      fallback.destination &&
+      fallback.origin.toLowerCase() !== fallback.destination.toLowerCase()
+    ) {
+      logParserDiagnostics(trimmed, fallback, "Deterministic Pattern Parser");
+      setCachedIntent(trimmed, fallback);
+      return fallback;
+    }
+    if (
+      fallback.origin &&
+      fallback.destination &&
+      fallback.origin.toLowerCase() === fallback.destination.toLowerCase()
+    ) {
+      logParserDiagnostics(trimmed, fallback, "Same Station Guard");
+      return fallback;
+    }
   }
 
   // ── Failure breakdown ───────────────────────────────────────────────────────
