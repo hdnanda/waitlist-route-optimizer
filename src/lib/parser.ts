@@ -243,11 +243,19 @@ export function extractSemanticDate(text: string): { date: string | null; matche
 }
 
 const DATE_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(\d{1,2})\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i, "$1 $2"],
-  [/\b(\d{1,2})\s+(जनवरी|फ़रवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|अक्टूबर|नवंबर|दिसंबर)\b/i, "$1 $2"],
-  [/\b(tomorrow|कल)\b/i, "tomorrow"],
+  // 1. Day with optional ordinal suffix (st, nd, rd, th) + optional "of" + Month: "29th of November", "29 Nov", "the 29th of November"
+  [/(?:the\s+)?\b(\d{1,2})(?:st|nd|rd|th)?(?:\s+of)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i, "$1 $2"],
+  // 2. Month + Day with optional ordinal suffix: "November 29th", "Nov 29", "November the 29th"
+  [/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\b/i, "$2 $1"],
+  // 3. Hindi Month: "29 नवंबर", "29th नवंबर"
+  [/\b(\d{1,2})(?:st|nd|rd|th)?\s+(जनवरी|फ़रवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|अक्टूबर|नवंबर|दिसंबर)\b/i, "$1 $2"],
+  // 4. Relative dates
+  [/\b(day\s+after\s+tomorrow|parso|parson|परसों)\b/i, "parso"],
+  [/\b(tomorrow|kal|कल)\b/i, "tomorrow"],
+  [/\b(today|aaj|आज)\b/i, "today"],
   [/\b(next\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/i, "$1"],
-  [/\b(\d{1,2})[\/\-](\d{1,2})\b/, "$1/$2"],
+  // 5. Numeric formats: "29/11", "29-11", "29/11/2026"
+  [/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-]\d{2,4})?\b/, "$1/$2"],
 ];
 
 function levenshteinDistance(s1: string, s2: string): number {
@@ -671,9 +679,24 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
     result.destination &&
     result.origin.toLowerCase() !== result.destination.toLowerCase()
   ) {
-    logParserDiagnostics(trimmed, result, "AI / OpenAI Engine");
-    setCachedIntent(trimmed, result);
-    return result;
+    // If AI / API call returned origin and destination but missed date or class, backfill with deterministic patterns!
+    let dateToUse = result.date;
+    let classToUse = result.class;
+    if (!dateToUse || !classToUse) {
+      const fb = deterministicFallback(trimmed);
+      if (!dateToUse && fb?.date) dateToUse = fb.date;
+      if (!classToUse && fb?.class) classToUse = fb.class;
+    }
+
+    const enhancedResult = {
+      ...result,
+      date: dateToUse,
+      class: classToUse,
+    };
+
+    logParserDiagnostics(trimmed, enhancedResult, "AI / OpenAI Engine");
+    setCachedIntent(trimmed, enhancedResult);
+    return enhancedResult;
   }
 
   // ── Client-side deterministic fallback (safety net) ─────────────────────────
