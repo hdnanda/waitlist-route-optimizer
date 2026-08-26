@@ -31,7 +31,7 @@ function pickClass(intent: ParsedIntent, availableClasses: string[]): TrainClass
 
 function buildBadge(opt: DatasetOption): { badge: string; badgeBg: string } {
   if (opt.type === "DIRECT" && opt.status === "CONFIRMED")
-    return { badge: "DIRECT · CONFIRMED", badgeBg: "bg-green-700" };
+    return { badge: "DIRECT · CONFIRMED", badgeBg: "bg-[#3F8F5F]" };
   if (opt.type === "DIRECT" && opt.status === "WL")
     return { badge: "DIRECT · LOW CHANCE", badgeBg: "bg-[#C0432E]" };
   if (opt.type === "SPLIT")
