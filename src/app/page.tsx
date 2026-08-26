@@ -87,6 +87,8 @@ export default function HomePage() {
   const [voiceLang, setVoiceLang] = useState<"en-IN" | "hi-IN">("en-IN");
   const [showSessionNotice, setShowSessionNotice] = useState(false);
   const recognitionRef = useRef<unknown>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const latestTranscriptRef = useRef<string>("");
 
   // ── Session reset notice detection from URL ───────────────────────────────
   useEffect(() => {
@@ -277,16 +279,29 @@ export default function HomePage() {
       console.warn("[Speech-to-Text] SpeechRecognition API not supported on this browser.");
       return;
     }
+
     if (listening) {
-      (recognitionRef.current as { stop: () => void } | null)?.stop();
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      try {
+        (recognitionRef.current as { stop: () => void } | null)?.stop();
+      } catch {}
       setListening(false);
+      if (latestTranscriptRef.current) {
+        void handleSearch(latestTranscriptRef.current);
+      }
       return;
     }
+
+    latestTranscriptRef.current = "";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognition = new SR() as any;
     // Default to en-IN for crystal-clear English + Indian accent/city recognition
     recognition.lang = voiceLang;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
@@ -296,36 +311,58 @@ export default function HomePage() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (e: any) => {
-      const rawTranscript = (e.results?.[0]?.[0]?.transcript ?? "") as string;
-      const confidence = e.results?.[0]?.[0]?.confidence;
+      let accumulatedText = "";
+      for (let i = 0; i < e.results.length; i++) {
+        const item = e.results[i]?.[0]?.transcript;
+        if (item) {
+          accumulatedText += (accumulatedText ? " " : "") + item.trim();
+        }
+      }
+
+      if (!accumulatedText.trim()) return;
 
       // Only transliterate if the speech output contains Devanagari script characters
-      const hasDevanagari = /[\u0900-\u097F]/.test(rawTranscript);
-      const cleanPrompt = hasDevanagari ? devanagariToHinglish(rawTranscript) : rawTranscript.trim();
+      const hasDevanagari = /[\u0900-\u097F]/.test(accumulatedText);
+      const cleanPrompt = hasDevanagari ? devanagariToHinglish(accumulatedText) : accumulatedText.trim();
 
-      console.group("%c🎙️ [Speech-to-Text] Voice Input Captured", "color: #E8A33D; font-size: 13px; font-weight: bold;");
-      console.log("%cLanguage Mode:", "color: #a855f7; font-weight: bold;", voiceLang);
-      console.log("%cRaw Speech-to-Text (STT) Transcript:", "color: #f59e0b; font-weight: bold;", rawTranscript);
-      console.log("%cProcessed Prompt:", "color: #10b981; font-weight: bold;", cleanPrompt);
-      if (confidence !== undefined) {
-        console.log("Speech Confidence Score:", `${Math.round(confidence * 100)}%`);
+      latestTranscriptRef.current = cleanPrompt;
+      setInput(cleanPrompt); // Live typing stream into the textarea
+
+      // Reset the silence debounce timer
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
       }
-      console.log("%c🚀 Sending Prompt to Parser:", "color: #38bdf8; font-weight: bold;", cleanPrompt);
-      console.groupEnd();
 
-      setInput(cleanPrompt);
-      setListening(false);
-      void handleSearch(cleanPrompt);
+      // Stop & dispatch only after 1.2 seconds of complete silence
+      silenceTimerRef.current = setTimeout(() => {
+        console.group("%c🎙️ [Speech-to-Text] Silence Detected (1.2s) — Finalizing Voice Input", "color: #E8A33D; font-size: 13px; font-weight: bold;");
+        console.log("%cLanguage Mode:", "color: #a855f7; font-weight: bold;", voiceLang);
+        console.log("%cCaptured Prompt:", "color: #10b981; font-weight: bold;", cleanPrompt);
+        console.log("%c🚀 Dispatching to Optimizer:", "color: #38bdf8; font-weight: bold;", cleanPrompt);
+        console.groupEnd();
+
+        try {
+          recognition.stop();
+        } catch {}
+        setListening(false);
+        void handleSearch(cleanPrompt);
+      }, 1200);
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onerror = (e: any) => {
+      if (e?.error === "no-speech") return; // Ignore brief silence before user starts speaking
       console.error("%c[Speech-to-Text] ⚠️ Recognition Error:", "color: #ef4444; font-weight: bold;", e?.error || e);
       setInputError("Voice recognition error: " + (e?.error ?? "Please type instead."));
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       setListening(false);
     };
 
     recognition.onend = () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
       setListening(false);
     };
 
