@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Share2, ArrowRight } from "lucide-react";
@@ -9,15 +10,14 @@ export default function ConfirmationPage() {
   const { state } = useApp();
   const { currentBooking, loggedInAccount } = state;
 
+  useEffect(() => {
+    if (!currentBooking) {
+      router.replace("/?notice=session-reset");
+    }
+  }, [currentBooking, router]);
+
   if (!currentBooking) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-5 bg-transparent text-white w-full">
-        <div className="max-w-[480px] mx-auto text-center">
-          <p className="text-slate-400 mb-4 font-mono text-sm">No booking found.</p>
-          <button onClick={() => router.push("/")} className="rounded-xl bg-[#E8A33D] px-6 py-3 text-sm font-extrabold text-black shadow-[0_0_14px_rgba(232,163,61,0.45)]">← Home</button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

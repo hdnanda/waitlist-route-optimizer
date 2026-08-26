@@ -15,7 +15,8 @@ function generateOtpCode(): string {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { findAccount, setLoggedInAccount, registerAccount } = useApp();
+  const { state, findAccount, setLoggedInAccount, registerAccount } = useApp();
+  const { parsedIntent, selectedOption } = state;
   
   const [step, setStep] = useState<LoginStep>("mobile");
   const [mobile, setMobile] = useState("");
@@ -26,6 +27,13 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isNewUser, setIsNewUser] = useState(false);
   const [targetAccount, setTargetAccount] = useState<Account | null>(null);
+
+  // ── Session Guard: Redirect to home if refreshed without active booking context ──
+  useEffect(() => {
+    if (!parsedIntent || !selectedOption) {
+      router.replace("/?notice=session-reset");
+    }
+  }, [parsedIntent, selectedOption, router]);
 
   // ── OTP Real Code & Notification State ─────────────────────────────────────
   const [expectedOtp, setExpectedOtp] = useState<string>("");
@@ -39,6 +47,18 @@ export default function LoginPage() {
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
   ];
+
+  // ── Paste handler: distributes 4 digits across all inputs ─────────────────
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
+    if (!pasted) return;
+    const digits = pasted.split("");
+    while (digits.length < 4) digits.push("");
+    setOtpDigits(digits);
+    const nextIdx = Math.min(pasted.length, 3);
+    otpRefs[nextIdx]?.current?.focus();
+  };
 
   // ── Send OTP routine: generates code, triggers notification, schedule autofill ──
   const triggerSendOtp = useCallback(() => {
@@ -171,6 +191,10 @@ export default function LoginPage() {
       return () => clearTimeout(timer);
     }
   }, [step, router]);
+
+  if (!parsedIntent || !selectedOption) {
+    return null;
+  }
 
   return (
     <motion.main
@@ -391,6 +415,7 @@ export default function LoginPage() {
                       type="text"
                       inputMode="numeric"
                       value={digit}
+                      onPaste={handlePaste}
                       onChange={(e) => handleOtpChange(idx, e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Backspace" && !digit && idx > 0) {

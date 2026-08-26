@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -83,7 +83,20 @@ export default function HomePage() {
   const [inputError, setInputError] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [showSessionNotice, setShowSessionNotice] = useState(false);
   const recognitionRef = useRef<unknown>(null);
+
+  // ── Session reset notice detection from URL ───────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("notice") === "session-reset") {
+      setShowSessionNotice(true);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("notice");
+      window.history.replaceState({}, "", url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ""));
+    }
+  }, []);
 
   const handleSearch = useCallback(
     async (query?: string) => {
@@ -398,6 +411,32 @@ export default function HomePage() {
 
           {/* ── Right Column (lg:col-span-7): Intent Box & Quick Start Chips ───── */}
           <div className="lg:col-span-7 mt-4 lg:mt-0 lg:max-w-[560px]">
+            {/* Non-alarming session reset banner */}
+            <AnimatePresence>
+              {showSessionNotice && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="mb-3 rounded-xl border border-[#E8A33D]/50 bg-[#E8A33D]/10 p-3.5 flex items-start justify-between gap-3 text-white shadow-[0_0_12px_rgba(232,163,61,0.2)]"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <Sparkles className="h-4 w-4 text-[#E8A33D] shrink-0 mt-0.5" />
+                    <p className="text-xs text-slate-200 leading-relaxed font-sans">
+                      Your previous search was reset — this prototype doesn&apos;t save progress across a page reload. Search again below.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowSessionNotice(false)}
+                    className="text-slate-400 hover:text-white p-0.5 text-xs font-mono"
+                    aria-label="Dismiss notice"
+                  >
+                    ✕
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* "Ask Anything" Search Input Area */}
             <section className="mt-1">
               <GlowingSectionDivider title="ASK ANYTHING" />

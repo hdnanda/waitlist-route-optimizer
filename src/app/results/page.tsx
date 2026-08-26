@@ -51,6 +51,7 @@ export default function ResultsPage() {
   const [result, setResult] = useState<RouteResult | null>(null);
   const [selectedClass, setLocalClass] = useState<TrainClass | null>(parsedIntent?.class ?? null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showTrace, setShowTrace] = useState(false);
 
   // ── Spotlight Focus State ──────────────────────────────────────────────────
   const [spotlightMissing, setSpotlightMissing] = useState<("class" | "date")[] | null>(null);
@@ -556,39 +557,84 @@ export default function ResultsPage() {
           </motion.section>
         )}
 
-        {/* ── How it works panel (Full width below the grid when tickets are active) ── */}
+        {/* ── How it works & Reasoning trace panels (Full width below the grid when tickets are active) ── */}
         {isReady && result?.routeFound && (
-          <section className="mt-8 w-full">
-            <button onClick={() => setShowHowItWorks((v) => !v)}
-              className="flex w-full items-center justify-between rounded-xl bg-[#080808] border border-[#E8A33D]/40 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_0_8px_rgba(232,163,61,0.15)] hover:border-[#E8A33D]">
-              <span className="flex items-center gap-2"><Info className="h-4 w-4 text-[#E8A33D]" /> How this works for real</span>
-              {showHowItWorks ? <ChevronUp className="h-4 w-4 text-[#E8A33D]" /> : <ChevronDown className="h-4 w-4 text-[#E8A33D]" />}
-            </button>
-            <AnimatePresence>
-              {showHowItWorks && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden">
-                  <div className="rounded-b-xl bg-[#050505] border-x border-b border-[#E8A33D]/30 px-4 pb-5 pt-3 text-xs text-slate-300 leading-5 space-y-3">
-                    {[
-                      ["MOCK", "Chart prep happens 4 hours before departure. We monitor both split legs independently."],
-                      ["MOCK", "If Leg 1 of a split fails to confirm at charting, we auto-fall back to the direct waitlist or next available train."],
-                      ["MOCK", "TDR/refund: a cancelled split leg is filed via TDR within 72 hrs automatically — no manual action needed."],
-                      ["REAL PLAN", "The AI does not calculate routes or times. A deterministic backend computes split-ticket permutations, quota checks, and layovers. The OpenAI model is used only to (1) parse the user's natural-language request and (2) write the plain-language explanations."],
-                      ["REAL PLAN", "Confidence percentages are static mock values standing in for what would be a historical clearance-rate calculation over real PRS chart data in production."],
-                      ["REAL PLAN", "Payment deduction without ticket confirmation is IRCTC's most common real complaint. A production version would use idempotent payment intents with webhook-based reconciliation instead of IRCTC's current fire-and-forget flow."],
-                      ["REAL PLAN", "Our 16 hand-modeled routes reflect realistic current train patterns. Any other route is generated on the spot using real geographic distance and known junction data — in production this layer would be replaced by live PRS queries, but the app never simply says no."],
-                    ].map(([tag, text], i) => (
-                      <div key={i} className="flex gap-2.5">
-                        <span className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-mono font-bold ${tag === "MOCK" ? "border border-[#E8A33D]/50 bg-[#E8A33D]/15 text-[#E8A33D]" : "border border-[#3F8F5F]/50 bg-[#3F8F5F]/15 text-[#3F8F5F]"}`}>
-                          {tag}
-                        </span>
-                        <p>{text}</p>
+          <section className="mt-8 w-full space-y-3">
+            {/* 1. Reasoning Trace Accordion ("See how we found this") */}
+            {result.trace && result.trace.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowTrace((v) => !v)}
+                  className="flex w-full items-center justify-between rounded-xl bg-[#080808] border border-[#E8A33D]/40 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_0_8px_rgba(232,163,61,0.15)] hover:border-[#E8A33D] transition"
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-[#E8A33D]" /> See how we found this (Engine Trace)
+                  </span>
+                  {showTrace ? <ChevronUp className="h-4 w-4 text-[#E8A33D]" /> : <ChevronDown className="h-4 w-4 text-[#E8A33D]" />}
+                </button>
+                <AnimatePresence>
+                  {showTrace && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="rounded-b-xl bg-[#050505] border-x border-b border-[#E8A33D]/30 p-4 font-mono text-xs text-slate-300 space-y-1.5 leading-relaxed">
+                        {result.trace.map((line, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <span className="text-[#E8A33D] font-bold shrink-0">[{i + 1}]</span>
+                            <span className={line.startsWith("→ checking direct") ? "text-amber-300" : line.startsWith("→ found") ? "text-emerald-400" : "text-slate-300"}>{line}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* 2. Architecture & Systems Panel ("How this works for real") */}
+            <div>
+              <button
+                onClick={() => setShowHowItWorks((v) => !v)}
+                className="flex w-full items-center justify-between rounded-xl bg-[#080808] border border-[#E8A33D]/40 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_0_8px_rgba(232,163,61,0.15)] hover:border-[#E8A33D] transition"
+              >
+                <span className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-[#E8A33D]" /> How this works for real
+                </span>
+                {showHowItWorks ? <ChevronUp className="h-4 w-4 text-[#E8A33D]" /> : <ChevronDown className="h-4 w-4 text-[#E8A33D]" />}
+              </button>
+              <AnimatePresence>
+                {showHowItWorks && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="rounded-b-xl bg-[#050505] border-x border-b border-[#E8A33D]/30 px-4 pb-5 pt-3 text-xs text-slate-300 leading-5 space-y-3">
+                      {[
+                        ["MOCK", "Chart prep happens 4 hours before departure. We monitor both split legs independently."],
+                        ["MOCK", "If Leg 1 of a split fails to confirm at charting, we auto-fall back to the direct waitlist or next available train."],
+                        ["MOCK", "TDR/refund: a cancelled split leg is filed via TDR within 72 hrs automatically — no manual action needed."],
+                        ["REAL PLAN", "The AI does not calculate routes or times. A deterministic backend computes split-ticket permutations, quota checks, and layovers. The OpenAI model is used only to (1) parse the user's natural-language request and (2) write the plain-language explanations."],
+                        ["REAL PLAN", "Confidence percentages are static mock values standing in for what would be a historical clearance-rate calculation over real PRS chart data in production."],
+                        ["REAL PLAN", "Payment deduction without ticket confirmation is IRCTC's most common real complaint. A production version would use idempotent payment intents with webhook-based reconciliation instead of IRCTC's current fire-and-forget flow."],
+                        ["REAL PLAN", "Our 16 hand-modeled routes reflect realistic current train patterns. Any other route is generated on the spot using real geographic distance and known junction data — in production this layer would be replaced by live PRS queries, but the app never simply says no."],
+                      ].map(([tag, text], i) => (
+                        <div key={i} className="flex gap-2.5">
+                          <span className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-mono font-bold ${tag === "MOCK" ? "border border-[#E8A33D]/50 bg-[#E8A33D]/15 text-[#E8A33D]" : "border border-[#3F8F5F]/50 bg-[#3F8F5F]/15 text-[#3F8F5F]"}`}>
+                            {tag}
+                          </span>
+                          <p>{text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </section>
         )}
 

@@ -106,6 +106,12 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, currentBooking: action.payload };
     case "ADD_TICKET": {
       if (!state.loggedInAccount) return state;
+      const alreadyHas = state.loggedInAccount.tickets.some(
+        (t) => t.pnr === action.payload.pnr || (t.route === action.payload.route && t.train === action.payload.train && t.date === action.payload.date)
+      );
+      if (alreadyHas) {
+        return { ...state, currentBooking: action.payload };
+      }
       const updated = {
         ...state.loggedInAccount,
         tickets: [action.payload, ...state.loggedInAccount.tickets],

@@ -23,6 +23,13 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // ── Session Guard: Redirect to home if refreshed without active booking context ──
+  useEffect(() => {
+    if (!parsedIntent || !selectedOption || !loggedInAccount) {
+      router.replace("/?notice=session-reset");
+    }
+  }, [parsedIntent, selectedOption, loggedInAccount, router]);
+
   // ── OTP State & Notification ───────────────────────────────────────────────
   const [expectedOtp, setExpectedOtp] = useState<string>("");
   const [showNotification, setShowNotification] = useState(false);
@@ -64,9 +71,23 @@ export default function PaymentPage() {
 
   // Trigger OTP on page load & auto-focus
   useEffect(() => {
-    triggerSendOtp();
-    setTimeout(() => otpRefs[0]?.current?.focus(), 150);
-  }, [triggerSendOtp]);
+    if (parsedIntent && selectedOption && loggedInAccount) {
+      triggerSendOtp();
+      setTimeout(() => otpRefs[0]?.current?.focus(), 150);
+    }
+  }, [triggerSendOtp, parsedIntent, selectedOption, loggedInAccount]);
+
+  // ── Paste handler: distributes 4 digits across all inputs ─────────────────
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
+    if (!pasted) return;
+    const digits = pasted.split("");
+    while (digits.length < 4) digits.push("");
+    setOtpDigits(digits);
+    const nextIdx = Math.min(pasted.length, 3);
+    otpRefs[nextIdx]?.current?.focus();
+  };
 
   const handleOtpChange = (idx: number, val: string) => {
     if (!/^\d*$/.test(val)) return;
@@ -77,6 +98,7 @@ export default function PaymentPage() {
   };
 
   const handleVerify = () => {
+    if (loading) return; // Prevent spam-clicking / duplicate submissions
     if (otpDigits.some((d) => !d)) {
       setError("Enter all 4 digits.");
       return;
@@ -110,6 +132,10 @@ export default function PaymentPage() {
       router.push("/confirmation");
     }, 1500);
   };
+
+  if (!parsedIntent || !selectedOption || !loggedInAccount) {
+    return null;
+  }
 
   return (
     <motion.main
@@ -186,6 +212,7 @@ export default function PaymentPage() {
                 type="text"
                 inputMode="numeric"
                 value={digit}
+                onPaste={handlePaste}
                 onChange={(e) => handleOtpChange(idx, e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Backspace" && !digit && idx > 0) {

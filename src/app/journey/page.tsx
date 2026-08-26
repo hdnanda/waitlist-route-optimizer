@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Bell, BellOff, AlertTriangle, CheckCircle2, Clock, Activity, Ticket, ArrowRight, UserCheck } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, AlertTriangle, CheckCircle2, Clock, Ticket, ArrowRight } from "lucide-react";
 import { useApp } from "@/lib/context";
 
 function calculateLayover(arr: string, dep: string): string | null {
@@ -31,41 +31,33 @@ export default function JourneyPage() {
   const { currentBooking, loggedInAccount } = state;
   const [alertOn, setAlertOn] = useState(false);
 
-  if (!currentBooking) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-5 bg-transparent text-white text-center w-full">
-        <div className="max-w-[480px] mx-auto flex flex-col items-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[#E8A33D]/40 bg-[#E8A33D]/10 mb-4 shadow-[0_0_20px_rgba(232,163,61,0.2)]">
-            <Activity className="h-8 w-8 text-[#E8A33D]/70" />
-          </div>
-          <p className="text-white font-bold text-lg mb-1">No active journey</p>
-          <p className="text-sm text-slate-400 mb-1 max-w-[260px] leading-relaxed">
-            You are not signed in.
-          </p>
-          <p className="text-xs text-slate-500 mb-6 max-w-[260px] leading-relaxed">
-            Book a confirmed route to track your journey status here.
-          </p>
-          <button onClick={() => router.push("/")} className="rounded-xl bg-[#E8A33D] px-6 py-3 text-sm font-extrabold text-black shadow-[0_0_14px_rgba(232,163,61,0.45)] hover:bg-[#F0B250] transition">← Find a route</button>
-        </div>
-      </div>
-    );
+  const activeBooking = currentBooking ?? loggedInAccount?.tickets[0] ?? null;
+
+  useEffect(() => {
+    if (!activeBooking) {
+      router.replace("/?notice=session-reset");
+    }
+  }, [activeBooking, router]);
+
+  if (!activeBooking) {
+    return null;
   }
 
-  const isSplit = currentBooking.isSplit;
+  const isSplit = activeBooking.isSplit;
   const isTwoDifferentTrains = Boolean(
     isSplit &&
-    currentBooking.leg1 &&
-    currentBooking.leg2 &&
-    currentBooking.leg1.trainNumber !== currentBooking.leg2.trainNumber
+    activeBooking.leg1 &&
+    activeBooking.leg2 &&
+    activeBooking.leg1.trainNumber !== activeBooking.leg2.trainNumber
   );
 
-  const transferStation = currentBooking.leg1?.to ?? "Intermediate Junction";
-  const layoverDuration = (currentBooking.leg1 && currentBooking.leg2)
-    ? calculateLayover(currentBooking.leg1.arrival, currentBooking.leg2.departure)
+  const transferStation = activeBooking.leg1?.to ?? "Intermediate Junction";
+  const layoverDuration = (activeBooking.leg1 && activeBooking.leg2)
+    ? calculateLayover(activeBooking.leg1.arrival, activeBooking.leg2.departure)
     : null;
 
   const timelineSteps = [
-    { label: "Booked", sublabel: `PNR: ${currentBooking.pnr}`, status: "done", icon: CheckCircle2 },
+    { label: "Booked", sublabel: `PNR: ${activeBooking.pnr}`, status: "done", icon: CheckCircle2 },
     { label: "Chart Preparation", sublabel: "Approx 4 hrs before departure", status: "pending", icon: Clock },
     {
       label: "Final Status",
@@ -110,11 +102,11 @@ export default function JourneyPage() {
           {/* ── Left Column (lg:col-span-7): Timeline & Itinerary ── */}
           <div className="lg:col-span-7">
             <span className="font-mono text-[10px] font-bold tracking-widest text-[#E8A33D]">JOURNEY DASHBOARD</span>
-            <h1 className="mt-2 font-serif text-2xl lg:text-3xl font-bold leading-tight text-white">{currentBooking.route}</h1>
-            <p className="mt-1 text-sm font-mono text-slate-400">{currentBooking.date} · {currentBooking.class}</p>
+            <h1 className="mt-2 font-serif text-2xl lg:text-3xl font-bold leading-tight text-white">{activeBooking.route}</h1>
+            <p className="mt-1 text-sm font-mono text-slate-400">{activeBooking.date} · {activeBooking.class}</p>
 
             {/* Transfer Connection Warning / Info Banner */}
-            {isTwoDifferentTrains && currentBooking.leg1 && currentBooking.leg2 && (
+            {isTwoDifferentTrains && activeBooking.leg1 && activeBooking.leg2 && (
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                 className="mt-4 flex items-start gap-3 rounded-xl bg-[#E8A33D]/10 border border-[#E8A33D]/60 p-4 shadow-[0_0_12px_rgba(232,163,61,0.25)]">
                 <AlertTriangle className="h-5 w-5 text-[#E8A33D] shrink-0 mt-0.5" />
@@ -123,7 +115,7 @@ export default function JourneyPage() {
                     Connecting Transfer at {transferStation} {layoverDuration ? `(${layoverDuration} layover)` : ""}
                   </p>
                   <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                    De-boarding &amp; platform change required. Arrive <strong className="text-white">{currentBooking.leg1.arrival}</strong> on {currentBooking.leg1.trainName}, board <strong className="text-white">{currentBooking.leg2.departure}</strong> on {currentBooking.leg2.trainName}.
+                    De-boarding &amp; platform change required. Arrive <strong className="text-white">{activeBooking.leg1.arrival}</strong> on {activeBooking.leg1.trainName}, board <strong className="text-white">{activeBooking.leg2.departure}</strong> on {activeBooking.leg2.trainName}.
                   </p>
                 </div>
               </motion.div>
@@ -159,11 +151,11 @@ export default function JourneyPage() {
             </section>
 
             {/* Split itinerary */}
-            {isSplit && currentBooking.leg1 && currentBooking.leg2 && (
+            {isSplit && activeBooking.leg1 && activeBooking.leg2 && (
               <section className="mt-6">
                 <p className="text-xs font-mono font-bold tracking-[0.12em] text-[#E8A33D] mb-3">UNIFIED ITINERARY</p>
                 <div className="rounded-2xl bg-[#080808] border border-[#E8A33D]/60 shadow-[0_0_14px_rgba(232,163,61,0.25)] overflow-hidden">
-                  {[currentBooking.leg1, currentBooking.leg2].map((leg, i) => (
+                  {[activeBooking.leg1, activeBooking.leg2].map((leg, i) => (
                     <div key={i} className={`p-4 ${i > 0 ? "border-t border-white/10" : ""}`}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="rounded border border-[#E8A33D]/50 bg-[#E8A33D]/15 px-2 py-0.5 text-[10px] font-mono font-bold text-[#E8A33D]">LEG {i + 1}</span>
@@ -235,7 +227,7 @@ export default function JourneyPage() {
               ) : (
                 <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
                   {allTickets.map((t) => {
-                    const isSelected = t.pnr === currentBooking.pnr;
+                    const isSelected = t.pnr === activeBooking.pnr;
                     return (
                       <div
                         key={t.pnr}
