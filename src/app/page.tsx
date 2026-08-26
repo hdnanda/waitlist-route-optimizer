@@ -347,15 +347,11 @@ export default function HomePage() {
           {/* ── Left Column (lg:col-span-5): Branding & 3-Step Explainer ─────────── */}
           <div className="lg:col-span-5 flex flex-col justify-between">
             <header className="mt-0.5">
-              <h1 className="font-serif text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
+              <h1 className="font-serif text-4xl sm:text-5xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
                 घर वापसी
               </h1>
-              <div className="my-2.5 h-[1px] w-full bg-gradient-to-r from-[#E8A33D]/80 via-[#E8A33D]/30 to-transparent" />
-              <p className="text-base lg:text-lg text-slate-200 font-semibold">
-                Waitlist Route Optimizer
-              </p>
-              <p className="mt-1 text-xs lg:text-sm text-slate-400 leading-relaxed">
-                Getting you home, even when the direct train won&apos;t
+              <p className="mt-4 font-serif text-2xl sm:text-3xl font-bold text-[#EBE5D8] leading-tight">
+                Getting you home — even when the direct train won&apos;t
               </p>
               <p className="mt-2 text-xs lg:text-sm text-slate-400/90 leading-relaxed hidden lg:block">
                 Stuck on a train waitlist? We look beyond the direct queue to discover confirmed split-ticket quotas and alternate station connections.
