@@ -53,3 +53,12 @@ body {
 .neon-glow-text {
   text-shadow: 0 0 10px rgba(232, 163, 61, 0.5);
 }
+
+/* Hide scrollbar for clean touch swipe */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

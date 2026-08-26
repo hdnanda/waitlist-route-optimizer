@@ -507,10 +507,10 @@ export default function HomePage() {
               </div>
             </section>
 
-            {/* ── Quick Start 2x3 Grid (Below Search) ────────────────────────── */}
+            {/* ── Quick Start: Horizontal Scroll on Mobile (< md), 2-Col Grid on Desktop (md+) ── */}
             <section className="mt-3">
               <GlowingSectionDivider title="QUICK START — TAP TO TRY" />
-              <div className="grid grid-cols-2 gap-3 my-1">
+              <div className="flex overflow-x-auto no-scrollbar gap-3 my-1 pb-1 pt-0.5 -mx-1 px-1 md:grid md:grid-cols-2 md:gap-3 md:overflow-visible md:pb-0 md:mx-0 md:px-0">
                 {EXAMPLE_CHIPS.map((chip) => {
                   const Icon = chip.icon;
                   return (
@@ -519,7 +519,7 @@ export default function HomePage() {
                       type="button"
                       onClick={() => void handleSearch(chip.input)}
                       disabled={loading}
-                      className="bg-[#050505] hover:bg-[#0A0A0A] rounded-2xl p-3.5 border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] hover:shadow-[0_0_18px_rgba(232,163,61,0.65),inset_0_0_10px_rgba(232,163,61,0.15)] flex flex-col justify-between cursor-pointer text-left transition-all duration-200 min-h-[92px] active:scale-[0.98]"
+                      className="w-[195px] shrink-0 md:w-full md:shrink bg-[#050505] hover:bg-[#0A0A0A] rounded-2xl p-3.5 border border-[#E8A33D]/80 shadow-[0_0_10px_rgba(232,163,61,0.35)] hover:shadow-[0_0_18px_rgba(232,163,61,0.65),inset_0_0_10px_rgba(232,163,61,0.15)] flex flex-col justify-between cursor-pointer text-left transition-all duration-200 min-h-[92px] active:scale-[0.98]"
                     >
                       <div className="flex items-center justify-between w-full">
                         <Icon className="h-4 w-4 text-[#E8A33D] drop-shadow-[0_0_6px_rgba(232,163,61,0.5)]" />
@@ -529,7 +529,7 @@ export default function HomePage() {
                         <p className="font-medium text-sm text-white leading-tight mt-1.5">
                           {chip.label}
                         </p>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5 leading-tight">
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5 leading-tight truncate">
                           {chip.sublabel}
                         </p>
                       </div>
