@@ -6,6 +6,7 @@
 import type { ParsedIntent, RouteResult, ReasonedOption, TrainClass, DatasetOption, OperationalStats } from "./types";
 import { findRoute, getAvailableClasses } from "./dataset";
 import { seededRandom } from "./seededRandom";
+import { priceForClass, CLASS_MULTIPLIER } from "./pricing";
 
 const DEFAULT_CLASS: TrainClass = "3A";
 
@@ -25,7 +26,7 @@ function pickClass(intent: ParsedIntent, availableClasses: string[]): TrainClass
   if (preferred && availableClasses.includes(preferred)) return preferred;
   if (availableClasses.includes("3A")) return "3A";
   if (availableClasses.includes("SL")) return "SL";
-  return availableClasses[0] as TrainClass ?? DEFAULT_CLASS;
+  return (availableClasses[0] as TrainClass) ?? DEFAULT_CLASS;
 }
 
 function buildBadge(opt: DatasetOption): { badge: string; badgeBg: string } {
@@ -82,6 +83,16 @@ function buildStatusDisplay(opt: DatasetOption): string {
   return "RAC";
 }
 
+/** Runtime pricing guard: extracts canonical 3A baseline and scales accurately to selectedClass */
+function getGuardedFare(opt: DatasetOption, sourceClass: TrainClass, targetClass: TrainClass): number {
+  if (sourceClass === targetClass && opt.fare > 0) {
+    return opt.fare;
+  }
+  const sourceMultiplier = CLASS_MULTIPLIER[sourceClass] ?? 1.0;
+  const base3APrice = Math.round(opt.fare / sourceMultiplier);
+  return priceForClass(base3APrice, targetClass);
+}
+
 export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClass): RouteResult {
   const origin = intent.origin;
   const destination = intent.destination;
@@ -119,7 +130,8 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
   const selectedClass = overrideClass ?? pickClass(intent, availableClasses);
   trace.push(`→ class selected: ${selectedClass} (available on this route: ${availableClasses.join(", ")})`);
 
-  const classData = route.classes.find((c) => c.class === selectedClass);
+  // Find class data (or fallback to first available class if requested is missing)
+  const classData = route.classes.find((c) => c.class === selectedClass) ?? route.classes[0];
   if (!classData) {
     trace.push(`→ ${selectedClass} not available on this route — no data to reason over.`);
     return {
@@ -155,6 +167,8 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       `→ returning confirmed direct option.`
     );
     const { badge, badgeBg } = buildBadge(directOpt);
+    const directFare = getGuardedFare(directOpt, classData.class, selectedClass);
+
     return {
       routeFound: true,
       originDisplay: route.originName,
@@ -178,7 +192,7 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
           confirmationLikelihood: "Confirmed now",
           why: buildWhy(directOpt, route.originName, route.destinationName),
           isHero: true,
-          fare: directOpt.fare,
+          fare: directFare,
           trainNumber: directOpt.trainNumber,
           trainName: directOpt.trainName,
         },
@@ -215,6 +229,8 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
   // 1. Split (hero, if available)
   if (splitOpt) {
     const { badge, badgeBg } = buildBadge(splitOpt);
+    const splitFare = getGuardedFare(splitOpt, classData.class, selectedClass);
+
     options.push({
       id: "split",
       type: "SPLIT",
@@ -228,7 +244,7 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       confirmationLikelihood: buildConfidence(splitOpt),
       why: buildWhy(splitOpt, route.originName, route.destinationName),
       isHero: true,
-      fare: splitOpt.fare,
+      fare: splitFare,
       trainNumber: splitOpt.trainNumber,
       trainName: splitOpt.trainName,
       isSplit: true,
@@ -240,6 +256,8 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
   // 2. Nearby alternate (if available)
   if (nearbyOpt) {
     const { badge, badgeBg } = buildBadge(nearbyOpt);
+    const nearbyFare = getGuardedFare(nearbyOpt, classData.class, selectedClass);
+
     options.push({
       id: "nearby",
       type: "NEARBY",
@@ -253,7 +271,7 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       confirmationLikelihood: buildConfidence(nearbyOpt),
       why: buildWhy(nearbyOpt, route.originName, route.destinationName),
       transferTag: `🚕 ${nearbyOpt.nearbyDistanceKm}km transfer`,
-      fare: nearbyOpt.fare,
+      fare: nearbyFare,
       trainNumber: nearbyOpt.trainNumber,
       trainName: nearbyOpt.trainName,
     });
@@ -262,6 +280,8 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
   // 3. Direct WL (always shown last as fallback)
   if (directOpt) {
     const { badge, badgeBg } = buildBadge(directOpt);
+    const directFare = getGuardedFare(directOpt, classData.class, selectedClass);
+
     options.push({
       id: "direct",
       type: "DIRECT",
@@ -274,7 +294,7 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       statusBg: buildStatusBg(directOpt),
       confirmationLikelihood: buildConfidence(directOpt),
       why: buildWhy(directOpt, route.originName, route.destinationName),
-      fare: directOpt.fare,
+      fare: directFare,
       trainNumber: directOpt.trainNumber,
       trainName: directOpt.trainName,
     });
@@ -293,4 +313,3 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
     options,
   };
 }
-

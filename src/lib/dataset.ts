@@ -1,13 +1,53 @@
-import type { RouteData, TrainClass } from "./types";
+import type { RouteData, TrainClass, RouteClassData, DatasetOption } from "./types";
 import { generateRoute } from "./routeGenerator";
+import { priceForClass } from "./pricing";
 
-/**
- * Mock dataset — 6 route pairs, each with 2-3 classes.
- * All train numbers, timings, and fares are representative mock values.
- * No real PRS data; used only for hackathon demonstration.
- */
-export const ROUTES: RouteData[] = [
-  // ── Route 1: NDLS → PNBE (flagship) ─────────────────────────────────────
+interface CuratedOptionTemplate {
+  type: "DIRECT" | "SPLIT" | "NEARBY";
+  trainNumber: string;
+  trainName: string;
+  departure: string;
+  arrival: string;
+  duration: string;
+  fare3A: number;
+  status: "CONFIRMED" | "WL" | "RAC";
+  waitlistNumber?: number;
+  splitStation?: string;
+  splitLayoverMinutes?: number;
+  nearbyStation?: string;
+  nearbyDistanceKm?: number;
+  leg1?: {
+    trainNumber: string;
+    trainName: string;
+    from: string;
+    to: string;
+    departure: string;
+    arrival: string;
+  };
+  leg2?: {
+    trainNumber: string;
+    trainName: string;
+    from: string;
+    to: string;
+    departure: string;
+    arrival: string;
+  };
+}
+
+interface CuratedRouteTemplate {
+  originCode: string;
+  originName: string;
+  destinationCode: string;
+  destinationName: string;
+  aliases: {
+    origin: string[];
+    destination: string[];
+  };
+  options: CuratedOptionTemplate[];
+}
+
+const CURATED_TEMPLATES: CuratedRouteTemplate[] = [
+  // ── Route 1: NDLS → PNBE (New Delhi → Patna) ──────────────────────────────
   {
     originCode: "NDLS",
     originName: "New Delhi",
@@ -17,127 +57,62 @@ export const ROUTES: RouteData[] = [
       origin: ["delhi", "new delhi", "ndls", "dilli", "nai delhi", "old delhi", "hazrat nizamuddin"],
       destination: ["patna", "pnbe", "patna jn", "patna junction", "patna sahib"],
     },
-    classes: [
+    options: [
       {
-        class: "3A",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12310",
-            trainName: "Rajdhani Express",
-            departure: "17:00",
-            arrival: "06:30+1",
-            duration: "13h 30m",
-            fare: 2145,
-            status: "WL",
-            waitlistNumber: 47,
-          },
-          {
-            type: "SPLIT",
-            trainNumber: "12310",
-            trainName: "Rajdhani Express",
-            departure: "17:00",
-            arrival: "06:30+1",
-            duration: "13h 30m",
-            fare: 2290,
-            status: "CONFIRMED",
-            splitStation: "Deen Dayal Upadhyaya Jn",
-            splitLayoverMinutes: 0,
-            leg1: {
-              trainNumber: "12310",
-              trainName: "Rajdhani Express",
-              from: "New Delhi",
-              to: "DDU Jn",
-              departure: "17:00",
-              arrival: "03:45+1",
-            },
-            leg2: {
-              trainNumber: "12310",
-              trainName: "Rajdhani Express",
-              from: "DDU Jn",
-              to: "Patna Jn",
-              departure: "03:50+1",
-              arrival: "06:30+1",
-            },
-          },
-          {
-            type: "NEARBY",
-            trainNumber: "12802",
-            trainName: "Purushottam Express",
-            departure: "16:50",
-            arrival: "07:20+1",
-            duration: "14h 30m",
-            fare: 1890,
-            status: "CONFIRMED",
-            nearbyStation: "Danapur",
-            nearbyDistanceKm: 12,
-          },
-        ],
+        type: "DIRECT",
+        trainNumber: "12310",
+        trainName: "Rajdhani Express",
+        departure: "17:00",
+        arrival: "06:30+1",
+        duration: "13h 30m",
+        fare3A: 2145,
+        status: "WL",
+        waitlistNumber: 47,
       },
       {
-        class: "SL",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12310",
-            trainName: "Rajdhani Express",
-            departure: "17:00",
-            arrival: "06:30+1",
-            duration: "13h 30m",
-            fare: 545,
-            status: "WL",
-            waitlistNumber: 12,
-          },
-          {
-            type: "SPLIT",
-            trainNumber: "12310",
-            trainName: "Rajdhani Express",
-            departure: "17:00",
-            arrival: "06:30+1",
-            duration: "13h 30m",
-            fare: 590,
-            status: "CONFIRMED",
-            splitStation: "Deen Dayal Upadhyaya Jn",
-            splitLayoverMinutes: 0,
-            leg1: {
-              trainNumber: "12310",
-              trainName: "Rajdhani Express",
-              from: "New Delhi",
-              to: "DDU Jn",
-              departure: "17:00",
-              arrival: "03:45+1",
-            },
-            leg2: {
-              trainNumber: "12310",
-              trainName: "Rajdhani Express",
-              from: "DDU Jn",
-              to: "Patna Jn",
-              departure: "03:50+1",
-              arrival: "06:30+1",
-            },
-          },
-        ],
+        type: "SPLIT",
+        trainNumber: "12310",
+        trainName: "Rajdhani Express",
+        departure: "17:00",
+        arrival: "06:30+1",
+        duration: "13h 30m",
+        fare3A: 2290,
+        status: "CONFIRMED",
+        splitStation: "Deen Dayal Upadhyaya Jn",
+        splitLayoverMinutes: 0,
+        leg1: {
+          trainNumber: "12310",
+          trainName: "Rajdhani Express",
+          from: "New Delhi",
+          to: "DDU Jn",
+          departure: "17:00",
+          arrival: "03:45+1",
+        },
+        leg2: {
+          trainNumber: "12310",
+          trainName: "Rajdhani Express",
+          from: "DDU Jn",
+          to: "Patna Jn",
+          departure: "03:50+1",
+          arrival: "06:30+1",
+        },
       },
       {
-        class: "2A",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12310",
-            trainName: "Rajdhani Express",
-            departure: "17:00",
-            arrival: "06:30+1",
-            duration: "13h 30m",
-            fare: 3245,
-            status: "WL",
-            waitlistNumber: 5,
-          },
-        ],
+        type: "NEARBY",
+        trainNumber: "12802",
+        trainName: "Purushottam Express",
+        departure: "16:50",
+        arrival: "07:20+1",
+        duration: "14h 30m",
+        fare3A: 1890,
+        status: "CONFIRMED",
+        nearbyStation: "Danapur",
+        nearbyDistanceKm: 12,
       },
     ],
   },
 
-  // ── Route 2: CSMT/BCT → BSB (Mumbai → Varanasi) ──────────────────────────
+  // ── Route 2: CSMT → BSB (Mumbai → Varanasi) ──────────────────────────────
   {
     originCode: "CSMT",
     originName: "Mumbai CSMT",
@@ -147,65 +122,57 @@ export const ROUTES: RouteData[] = [
       origin: ["mumbai", "csmt", "bct", "bombay", "dadar", "lokmanya tilak", "lt", "bandra", "vt"],
       destination: ["varanasi", "bsb", "banaras", "kashi", "varanasi jn"],
     },
-    classes: [
+    options: [
       {
-        class: "3A",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12167",
-            trainName: "Mumbai Banaras Express",
-            departure: "23:30",
-            arrival: "20:15+1",
-            duration: "20h 45m",
-            fare: 1875,
-            status: "WL",
-            waitlistNumber: 22,
-          },
-          {
-            type: "SPLIT",
-            trainNumber: "22127",
-            trainName: "Anandwan SF Express",
-            departure: "06:00",
-            arrival: "22:40+1",
-            duration: "16h 40m",
-            fare: 1950,
-            status: "CONFIRMED",
-            splitStation: "Kalyan Jn",
-            splitLayoverMinutes: 52,
-            leg1: {
-              trainNumber: "12167",
-              trainName: "Mumbai Banaras Express",
-              from: "Mumbai CSMT",
-              to: "Kalyan Jn",
-              departure: "23:30",
-              arrival: "00:35+1",
-            },
-            leg2: {
-              trainNumber: "22127",
-              trainName: "Anandwan SF Express",
-              from: "Kalyan Jn",
-              to: "Varanasi Jn",
-              departure: "01:27+1",
-              arrival: "20:15+1",
-            },
-          },
-        ],
+        type: "DIRECT",
+        trainNumber: "12167",
+        trainName: "Mumbai Banaras Express",
+        departure: "23:30",
+        arrival: "20:15+1",
+        duration: "20h 45m",
+        fare3A: 1875,
+        status: "WL",
+        waitlistNumber: 22,
       },
       {
-        class: "SL",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "11093",
-            trainName: "Mahanagari Express",
-            departure: "11:05",
-            arrival: "15:30+1",
-            duration: "28h 25m",
-            fare: 545,
-            status: "CONFIRMED",
-          },
-        ],
+        type: "SPLIT",
+        trainNumber: "22127",
+        trainName: "Anandwan SF Express",
+        departure: "06:00",
+        arrival: "22:40+1",
+        duration: "16h 40m",
+        fare3A: 1950,
+        status: "CONFIRMED",
+        splitStation: "Kalyan Jn",
+        splitLayoverMinutes: 52,
+        leg1: {
+          trainNumber: "12167",
+          trainName: "Mumbai Banaras Express",
+          from: "Mumbai CSMT",
+          to: "Kalyan Jn",
+          departure: "23:30",
+          arrival: "00:35+1",
+        },
+        leg2: {
+          trainNumber: "22127",
+          trainName: "Anandwan SF Express",
+          from: "Kalyan Jn",
+          to: "Varanasi Jn",
+          departure: "01:27+1",
+          arrival: "20:15+1",
+        },
+      },
+      {
+        type: "NEARBY",
+        trainNumber: "12562",
+        trainName: "Swatantrata Sainik Express",
+        departure: "21:10",
+        arrival: "18:40+1",
+        duration: "21h 30m",
+        fare3A: 1725,
+        status: "CONFIRMED",
+        nearbyStation: "Manduadih (Banaras)",
+        nearbyDistanceKm: 4,
       },
     ],
   },
@@ -220,110 +187,57 @@ export const ROUTES: RouteData[] = [
       origin: ["bengaluru", "bangalore", "sbc", "banglore", "yeshwanthpur", "ypr", "bengalore"],
       destination: ["lucknow", "lko", "lucknau", "lakhnaoo"],
     },
-    classes: [
+    options: [
       {
-        class: "3A",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12591",
-            trainName: "Gorakhpur Express",
-            departure: "19:45",
-            arrival: "18:30+2",
-            duration: "46h 45m",
-            fare: 2455,
-            status: "WL",
-            waitlistNumber: 31,
-          },
-          {
-            type: "SPLIT",
-            trainNumber: "12591",
-            trainName: "Gorakhpur Express",
-            departure: "19:45",
-            arrival: "18:30+2",
-            duration: "46h 45m",
-            fare: 2610,
-            status: "CONFIRMED",
-            splitStation: "Nagpur",
-            splitLayoverMinutes: 25,
-            leg1: {
-              trainNumber: "12591",
-              trainName: "Gorakhpur Express",
-              from: "Bengaluru City",
-              to: "Nagpur",
-              departure: "19:45",
-              arrival: "08:20+1",
-            },
-            leg2: {
-              trainNumber: "12591",
-              trainName: "Gorakhpur Express",
-              from: "Nagpur",
-              to: "Lucknow",
-              departure: "08:45+1",
-              arrival: "18:30+2",
-            },
-          },
-        ],
+        type: "DIRECT",
+        trainNumber: "12591",
+        trainName: "Gorakhpur Express",
+        departure: "19:45",
+        arrival: "18:30+2",
+        duration: "46h 45m",
+        fare3A: 2455,
+        status: "WL",
+        waitlistNumber: 31,
       },
       {
-        class: "SL",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12591",
-            trainName: "Gorakhpur Express",
-            departure: "19:45",
-            arrival: "18:30+2",
-            duration: "46h 45m",
-            fare: 785,
-            status: "WL",
-            waitlistNumber: 8,
-          },
-          {
-            type: "SPLIT",
-            trainNumber: "12591",
-            trainName: "Gorakhpur Express",
-            departure: "19:45",
-            arrival: "18:30+2",
-            duration: "46h 45m",
-            fare: 840,
-            status: "CONFIRMED",
-            splitStation: "Nagpur",
-            splitLayoverMinutes: 25,
-            leg1: {
-              trainNumber: "12591",
-              trainName: "Gorakhpur Express",
-              from: "Bengaluru City",
-              to: "Nagpur",
-              departure: "19:45",
-              arrival: "08:20+1",
-            },
-            leg2: {
-              trainNumber: "12591",
-              trainName: "Gorakhpur Express",
-              from: "Nagpur",
-              to: "Lucknow",
-              departure: "08:45+1",
-              arrival: "18:30+2",
-            },
-          },
-        ],
+        type: "SPLIT",
+        trainNumber: "12591",
+        trainName: "Gorakhpur Express",
+        departure: "19:45",
+        arrival: "18:30+2",
+        duration: "46h 45m",
+        fare3A: 2610,
+        status: "CONFIRMED",
+        splitStation: "Nagpur",
+        splitLayoverMinutes: 25,
+        leg1: {
+          trainNumber: "12591",
+          trainName: "Gorakhpur Express",
+          from: "Bengaluru City",
+          to: "Nagpur Jn",
+          departure: "19:45",
+          arrival: "16:20+1",
+        },
+        leg2: {
+          trainNumber: "12591",
+          trainName: "Gorakhpur Express",
+          from: "Nagpur Jn",
+          to: "Lucknow Charbagh",
+          departure: "16:45+1",
+          arrival: "18:30+2",
+        },
       },
       {
-        class: "2A",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12591",
-            trainName: "Gorakhpur Express",
-            departure: "19:45",
-            arrival: "18:30+2",
-            duration: "46h 45m",
-            fare: 3590,
-            status: "WL",
-            waitlistNumber: 15,
-          },
-        ],
+        type: "NEARBY",
+        trainNumber: "22683",
+        trainName: "Lucknow SF Express",
+        departure: "23:40",
+        arrival: "19:20+2",
+        duration: "43h 40m",
+        fare3A: 2260,
+        status: "CONFIRMED",
+        nearbyStation: "Lucknow City (LC)",
+        nearbyDistanceKm: 6,
       },
     ],
   },
@@ -335,186 +249,125 @@ export const ROUTES: RouteData[] = [
     destinationCode: "PNBE",
     destinationName: "Patna Jn",
     aliases: {
-      origin: ["chennai", "mas", "madras", "chennai central", "egmore"],
+      origin: ["chennai", "mas", "madras", "chennai central"],
       destination: ["patna", "pnbe", "patna jn", "patna junction"],
     },
-    classes: [
+    options: [
       {
-        class: "3A",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "13351",
-            trainName: "Dhanbad Express",
-            departure: "11:10",
-            arrival: "14:20+1",
-            duration: "27h 10m",
-            fare: 2185,
-            status: "WL",
-            waitlistNumber: 19,
-          },
-        ],
+        type: "DIRECT",
+        trainNumber: "12669",
+        trainName: "Ganga Kaveri Express",
+        departure: "17:40",
+        arrival: "06:30+2",
+        duration: "36h 50m",
+        fare3A: 2310,
+        status: "WL",
+        waitlistNumber: 19,
       },
       {
-        class: "SL",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "13351",
-            trainName: "Dhanbad Express",
-            departure: "11:10",
-            arrival: "14:20+1",
-            duration: "27h 10m",
-            fare: 645,
-            status: "CONFIRMED",
-          },
-        ],
+        type: "SPLIT",
+        trainNumber: "12669",
+        trainName: "Ganga Kaveri Express",
+        departure: "17:40",
+        arrival: "06:30+2",
+        duration: "36h 50m",
+        fare3A: 2465,
+        status: "CONFIRMED",
+        splitStation: "Vijayawada Jn",
+        splitLayoverMinutes: 15,
+        leg1: {
+          trainNumber: "12669",
+          trainName: "Ganga Kaveri Express",
+          from: "Chennai Central",
+          to: "Vijayawada Jn",
+          departure: "17:40",
+          arrival: "23:55",
+        },
+        leg2: {
+          trainNumber: "12669",
+          trainName: "Ganga Kaveri Express",
+          from: "Vijayawada Jn",
+          to: "Patna Jn",
+          departure: "00:10+1",
+          arrival: "06:30+2",
+        },
+      },
+      {
+        type: "NEARBY",
+        trainNumber: "12295",
+        trainName: "Sanghamitra Express",
+        departure: "15:40",
+        arrival: "07:45+2",
+        duration: "40h 05m",
+        fare3A: 2125,
+        status: "CONFIRMED",
+        nearbyStation: "Patliputra Jn",
+        nearbyDistanceKm: 10,
       },
     ],
   },
 
-  // ── Route 5: HWH → NDLS (Kolkata → Delhi) ────────────────────────────────
+  // ── Route 5: HWH → NDLS (Howrah → New Delhi) ─────────────────────────────
   {
     originCode: "HWH",
     originName: "Howrah Jn",
     destinationCode: "NDLS",
     destinationName: "New Delhi",
     aliases: {
-      origin: ["kolkata", "calcutta", "hwh", "howrah", "howrah jn", "sealdah", "sdah"],
-      destination: ["delhi", "new delhi", "ndls", "dilli"],
+      origin: ["howrah", "hwh", "kolkata", "calcutta", "sealdah"],
+      destination: ["delhi", "new delhi", "ndls", "dilli", "old delhi"],
     },
-    classes: [
+    options: [
       {
-        class: "3A",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12301",
-            trainName: "Howrah Rajdhani",
-            departure: "14:05",
-            arrival: "10:00+1",
-            duration: "19h 55m",
-            fare: 2340,
-            status: "WL",
-            waitlistNumber: 38,
-          },
-          {
-            type: "SPLIT",
-            trainNumber: "12301",
-            trainName: "Howrah Rajdhani",
-            departure: "14:05",
-            arrival: "10:00+1",
-            duration: "19h 55m",
-            fare: 2490,
-            status: "CONFIRMED",
-            splitStation: "Asansol Jn",
-            splitLayoverMinutes: 0,
-            leg1: {
-              trainNumber: "12301",
-              trainName: "Howrah Rajdhani",
-              from: "Howrah Jn",
-              to: "Asansol Jn",
-              departure: "14:05",
-              arrival: "16:50",
-            },
-            leg2: {
-              trainNumber: "12301",
-              trainName: "Howrah Rajdhani",
-              from: "Asansol Jn",
-              to: "New Delhi",
-              departure: "16:55",
-              arrival: "10:00+1",
-            },
-          },
-        ],
+        type: "DIRECT",
+        trainNumber: "12301",
+        trainName: "Howrah Rajdhani",
+        departure: "16:50",
+        arrival: "10:00+1",
+        duration: "17h 10m",
+        fare3A: 2050,
+        status: "WL",
+        waitlistNumber: 38,
       },
       {
-        class: "SL",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12311",
-            trainName: "Kalka Mail",
-            departure: "19:35",
-            arrival: "10:15+1",
-            duration: "14h 40m",
-            fare: 590,
-            status: "WL",
-            waitlistNumber: 6,
-          },
-          {
-            type: "SPLIT",
-            trainNumber: "12311",
-            trainName: "Kalka Mail",
-            departure: "19:35",
-            arrival: "10:15+1",
-            duration: "14h 40m",
-            fare: 640,
-            status: "CONFIRMED",
-            splitStation: "Asansol Jn",
-            splitLayoverMinutes: 0,
-            leg1: {
-              trainNumber: "12311",
-              trainName: "Kalka Mail",
-              from: "Howrah Jn",
-              to: "Asansol Jn",
-              departure: "19:35",
-              arrival: "22:05",
-            },
-            leg2: {
-              trainNumber: "12311",
-              trainName: "Kalka Mail",
-              from: "Asansol Jn",
-              to: "New Delhi",
-              departure: "22:10",
-              arrival: "10:15+1",
-            },
-          },
-        ],
+        type: "SPLIT",
+        trainNumber: "12301",
+        trainName: "Howrah Rajdhani",
+        departure: "16:50",
+        arrival: "10:00+1",
+        duration: "17h 10m",
+        fare3A: 2190,
+        status: "CONFIRMED",
+        splitStation: "Asansol Jn",
+        splitLayoverMinutes: 5,
+        leg1: {
+          trainNumber: "12301",
+          trainName: "Howrah Rajdhani",
+          from: "Howrah Jn",
+          to: "Asansol Jn",
+          departure: "16:50",
+          arrival: "19:10",
+        },
+        leg2: {
+          trainNumber: "12301",
+          trainName: "Howrah Rajdhani",
+          from: "Asansol Jn",
+          to: "New Delhi",
+          departure: "19:15",
+          arrival: "10:00+1",
+        },
       },
       {
-        class: "2A",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "12301",
-            trainName: "Howrah Rajdhani",
-            departure: "14:05",
-            arrival: "10:00+1",
-            duration: "19h 55m",
-            fare: 3480,
-            status: "WL",
-            waitlistNumber: 22,
-          },
-          {
-            type: "SPLIT",
-            trainNumber: "12301",
-            trainName: "Howrah Rajdhani",
-            departure: "14:05",
-            arrival: "10:00+1",
-            duration: "19h 55m",
-            fare: 3640,
-            status: "CONFIRMED",
-            splitStation: "Asansol Jn",
-            splitLayoverMinutes: 0,
-            leg1: {
-              trainNumber: "12301",
-              trainName: "Howrah Rajdhani",
-              from: "Howrah Jn",
-              to: "Asansol Jn",
-              departure: "14:05",
-              arrival: "16:50",
-            },
-            leg2: {
-              trainNumber: "12301",
-              trainName: "Howrah Rajdhani",
-              from: "Asansol Jn",
-              to: "New Delhi",
-              departure: "16:55",
-              arrival: "10:00+1",
-            },
-          },
-        ],
+        type: "NEARBY",
+        trainNumber: "12381",
+        trainName: "Poorva Express",
+        departure: "08:15",
+        arrival: "06:05+1",
+        duration: "21h 50m",
+        fare3A: 1885,
+        status: "CONFIRMED",
+        nearbyStation: "Delhi Sarai Rohilla (DEE)",
+        nearbyDistanceKm: 8,
       },
     ],
   },
@@ -529,41 +382,105 @@ export const ROUTES: RouteData[] = [
       origin: ["ahmedabad", "adi", "amdavad", "ahmadabad"],
       destination: ["gorakhpur", "gkp", "gorakhpur jn"],
     },
-    classes: [
+    options: [
       {
-        class: "3A",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "19409",
-            trainName: "Gorakhpur Express",
-            departure: "23:00",
-            arrival: "18:30+1",
-            duration: "19h 30m",
-            fare: 1675,
-            status: "WL",
-            waitlistNumber: 14,
-          },
-        ],
+        type: "DIRECT",
+        trainNumber: "19409",
+        trainName: "Gorakhpur Express",
+        departure: "23:00",
+        arrival: "18:30+1",
+        duration: "19h 30m",
+        fare3A: 1675,
+        status: "WL",
+        waitlistNumber: 14,
       },
       {
-        class: "SL",
-        options: [
-          {
-            type: "DIRECT",
-            trainNumber: "19409",
-            trainName: "Gorakhpur Express",
-            departure: "23:00",
-            arrival: "18:30+1",
-            duration: "19h 30m",
-            fare: 475,
-            status: "CONFIRMED",
-          },
-        ],
+        type: "SPLIT",
+        trainNumber: "19409",
+        trainName: "Gorakhpur Express",
+        departure: "23:00",
+        arrival: "18:30+1",
+        duration: "19h 30m",
+        fare3A: 1795,
+        status: "CONFIRMED",
+        splitStation: "Kanpur Central",
+        splitLayoverMinutes: 15,
+        leg1: {
+          trainNumber: "19409",
+          trainName: "Gorakhpur Express",
+          from: "Ahmedabad Jn",
+          to: "Kanpur Central",
+          departure: "23:00",
+          arrival: "12:15+1",
+        },
+        leg2: {
+          trainNumber: "19409",
+          trainName: "Gorakhpur Express",
+          from: "Kanpur Central",
+          to: "Gorakhpur Jn",
+          departure: "12:30+1",
+          arrival: "18:30+1",
+        },
+      },
+      {
+        type: "NEARBY",
+        trainNumber: "19037",
+        trainName: "Avadh Express",
+        departure: "23:15",
+        arrival: "20:00+1",
+        duration: "20h 45m",
+        fare3A: 1540,
+        status: "CONFIRMED",
+        nearbyStation: "Deoria Sadar",
+        nearbyDistanceKm: 50,
       },
     ],
   },
 ];
+
+const SUPPORTED_CLASSES: TrainClass[] = ["SL", "3A", "2A", "1A"];
+
+/** Build full RouteData with systematically derived prices across SL, 3A, 2A, 1A */
+function buildCuratedRoute(template: CuratedRouteTemplate): RouteData {
+  const classes: RouteClassData[] = SUPPORTED_CLASSES.map((cls) => {
+    const options: DatasetOption[] = template.options.map((opt) => {
+      const scaledFare = priceForClass(opt.fare3A, cls);
+      return {
+        type: opt.type,
+        trainNumber: opt.trainNumber,
+        trainName: opt.trainName,
+        departure: opt.departure,
+        arrival: opt.arrival,
+        duration: opt.duration,
+        fare: scaledFare,
+        status: opt.status,
+        waitlistNumber: opt.waitlistNumber,
+        splitStation: opt.splitStation,
+        splitLayoverMinutes: opt.splitLayoverMinutes,
+        nearbyStation: opt.nearbyStation,
+        nearbyDistanceKm: opt.nearbyDistanceKm,
+        leg1: opt.leg1 ? { ...opt.leg1 } : undefined,
+        leg2: opt.leg2 ? { ...opt.leg2 } : undefined,
+      };
+    });
+
+    return {
+      class: cls,
+      options,
+    };
+  });
+
+  return {
+    originCode: template.originCode,
+    originName: template.originName,
+    destinationCode: template.destinationCode,
+    destinationName: template.destinationName,
+    aliases: template.aliases,
+    classes,
+  };
+}
+
+export const ROUTES: RouteData[] = CURATED_TEMPLATES.map(buildCuratedRoute);
 
 /** Find a route in the dataset by fuzzy city matching (curated first, then procedural generator) */
 export function findRoute(origin: string, destination: string, requestedClass?: TrainClass): RouteData | null {

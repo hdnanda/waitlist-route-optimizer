@@ -1,19 +1,7 @@
 import { CITIES, CityEntry } from "./cities";
 import { seededRandom } from "./seededRandom";
 import { RouteData, TrainClass, DatasetOption } from "./types";
-
-const CLASS_MULTIPLIER: Record<"1A" | "2A" | "3A" | "SL" | "CC", number> = {
-  SL: 0.4,
-  "3A": 1.0,
-  "2A": 1.6,
-  "1A": 2.6,
-  CC: 0.85,
-};
-
-function priceForClass(basePrice3A: number, cls: TrainClass): number {
-  const mult = CLASS_MULTIPLIER[cls] ?? 1.0;
-  return Math.round(basePrice3A * mult);
-}
+import { priceForClass, CLASS_MULTIPLIER } from "./pricing";
 
 function haversineKm(a: CityEntry, b: CityEntry): number {
   const R = 6371;
