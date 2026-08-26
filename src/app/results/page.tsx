@@ -434,29 +434,28 @@ export default function ResultsPage() {
                   ))}
 
                   {/* "Pick a date" native picker chip */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.focus()}
-                      className="rounded-xl border border-[#E8A33D]/60 bg-[#080808] px-3.5 py-2.5 text-xs font-bold text-[#E8A33D] min-h-[44px] hover:border-[#E8A33D] hover:shadow-[0_0_12px_rgba(232,163,61,0.4)] transition flex items-center gap-2 active:scale-[0.97]"
-                    >
-                      <Calendar className="h-4 w-4 text-[#E8A33D]" />
-                      <span>Pick a date</span>
-                    </button>
+                  <label className="relative flex items-center gap-2 rounded-xl border border-[#E8A33D]/60 bg-[#080808] px-3.5 py-2.5 text-xs font-bold text-[#E8A33D] min-h-[44px] hover:border-[#E8A33D] hover:shadow-[0_0_12px_rgba(232,163,61,0.4)] transition cursor-pointer active:scale-[0.97]">
+                    <Calendar className="h-4 w-4 text-[#E8A33D] pointer-events-none shrink-0" />
+                    <span className="pointer-events-none">Pick a date</span>
                     <input
                       ref={dateInputRef}
                       type="date"
                       min={new Date().toISOString().split("T")[0]}
+                      onClick={(e) => {
+                        try {
+                          (e.target as HTMLInputElement).showPicker?.();
+                        } catch {}
+                      }}
                       onChange={(e) => {
                         if (e.target.value) {
                           const formatted = formatPickedDate(e.target.value);
                           handleDateChange(formatted);
                         }
                       }}
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                      title="Select custom date"
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20"
+                      title="Pick travel date"
                     />
-                  </div>
+                  </label>
                 </div>
               </motion.section>
             )}
