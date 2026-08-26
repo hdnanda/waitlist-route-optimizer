@@ -261,6 +261,120 @@ export function extractSemanticDate(text: string): { date: string | null; matche
   return { date: null, matchedPhrase: null };
 }
 
+// ── Concrete Date Normalization Helper ──────────────────────────────────────
+export function normalizeToConcreteDate(rawDate: string | null | undefined): string | null {
+  if (!rawDate) return null;
+  const trimmed = rawDate.trim().toLowerCase();
+  const now = new Date();
+
+  // 1. "today", "aaj", "आज"
+  if (/^(today|aaj|आज)$/i.test(trimmed)) {
+    const day = now.getDate();
+    const month = now.toLocaleString("en-US", { month: "short" });
+    return `${day} ${month}`;
+  }
+
+  // 2. "tomorrow", "kal", "कल"
+  if (/^(tomorrow|kal|कल)$/i.test(trimmed)) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + 1);
+    const day = d.getDate();
+    const month = d.toLocaleString("en-US", { month: "short" });
+    return `${day} ${month}`;
+  }
+
+  // 3. "parso", "day after tomorrow", "परसों", "in 2 days"
+  if (/^(day\s+after\s+tomorrow|parso|parson|परसों|in\s+2\s+days)$/i.test(trimmed)) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + 2);
+    const day = d.getDate();
+    const month = d.toLocaleString("en-US", { month: "short" });
+    return `${day} ${month}`;
+  }
+
+  // 4. "in 3 days"
+  if (/^(in\s+3\s+days|3\s+din\s+baad)$/i.test(trimmed)) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + 3);
+    const day = d.getDate();
+    const month = d.toLocaleString("en-US", { month: "short" });
+    return `${day} ${month}`;
+  }
+
+  // 5. "next [day of week]" (e.g. "next monday")
+  const nextDayMatch = trimmed.match(/^next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i);
+  if (nextDayMatch) {
+    const targetDayName = nextDayMatch[1].toLowerCase();
+    const dayMap: Record<string, number> = {
+      sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+      thursday: 4, friday: 5, saturday: 6
+    };
+    const targetDayIdx = dayMap[targetDayName];
+    if (targetDayIdx !== undefined) {
+      const currentDayIdx = now.getDay();
+      let diff = (targetDayIdx - currentDayIdx + 7) % 7;
+      if (diff === 0) diff = 7; // Next occurrence
+      const d = new Date(now);
+      d.setDate(d.getDate() + diff);
+      return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
+    }
+  }
+
+  // 6. "this weekend", "coming weekend", "next weekend"
+  if (/^(this\s+weekend|coming\s+weekend|weekend)$/i.test(trimmed)) {
+    const d = new Date(now);
+    const dayOfWeek = d.getDay();
+    const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7;
+    d.setDate(d.getDate() + daysUntilSat);
+    return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
+  }
+  if (/^(next\s+weekend)$/i.test(trimmed)) {
+    const d = new Date(now);
+    const dayOfWeek = d.getDay();
+    const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7;
+    d.setDate(d.getDate() + daysUntilSat + 7);
+    return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
+  }
+
+  // 7. Numeric dates like "29/11", "29-11", "2026-11-29"
+  const slashMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-]\d{2,4})?$/);
+  if (slashMatch) {
+    const dayNum = parseInt(slashMatch[1], 10);
+    const monthNum = parseInt(slashMatch[2], 10);
+    if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12) {
+      const d = new Date(now.getFullYear(), monthNum - 1, dayNum);
+      return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
+    }
+  }
+
+  // 8. "29 November" -> normalize month to short name "29 Nov"
+  const wordMatch = trimmed.match(/^(\d{1,2})\s+([a-z]+)$/i);
+  if (wordMatch) {
+    const dayNum = wordMatch[1];
+    const monthStr = wordMatch[2];
+    const MONTH_MAP: Record<string, string> = {
+      january: "Jan", jan: "Jan",
+      february: "Feb", feb: "Feb",
+      march: "Mar", mar: "Mar",
+      april: "Apr", apr: "Apr",
+      may: "May",
+      june: "Jun", jun: "Jun",
+      july: "Jul", jul: "Jul",
+      august: "Aug", aug: "Aug",
+      september: "Sep", sep: "Sep",
+      october: "Oct", oct: "Oct",
+      november: "Nov", nov: "Nov",
+      december: "Dec", dec: "Dec",
+    };
+    const normMonth = MONTH_MAP[monthStr.toLowerCase()];
+    if (normMonth) {
+      return `${dayNum} ${normMonth}`;
+    }
+  }
+
+  return rawDate;
+}
+
 const DATE_PATTERNS: Array<[RegExp, string]> = [
   // 1. Day with optional ordinal suffix (st, nd, rd, th) + optional "of" + Month: "29th of November", "29 Nov", "the 29th of November"
   [/(?:the\s+)?\b(\d{1,2})(?:st|nd|rd|th)?(?:\s+of)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i, "$1 $2"],
@@ -644,10 +758,12 @@ export function deterministicFallback(userInput: string): ParsedIntent | null {
     }
   }
 
+  const concreteDate = normalizeToConcreteDate(date);
+
   return {
     origin,
     destination,
-    date,
+    date: concreteDate,
     passengerNote: /grandfather|grandpa|dada|dadaji|nana|nanaji|दादा|नाना/i.test(text)
       ? "For grandfather"
       : /grandmother|grandma|dadi|dadiji|nani|naniji|दादी|नानी/i.test(text)
@@ -721,7 +837,7 @@ export async function parseIntent(userInput: string): Promise<ParsedIntent> {
 
     const enhancedResult = {
       ...result,
-      date: dateToUse,
+      date: normalizeToConcreteDate(dateToUse),
       class: classToUse,
     };
 
