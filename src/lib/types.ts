@@ -84,12 +84,18 @@ export interface ReasonedOption {
   isSplit?: boolean;
   leg1?: TrainLeg;
   leg2?: TrainLeg;
-}
-
-export interface OperationalStats {
-  directAnalyzed: number;
-  splitCombinations: number;
-  maxLayoverMins: number;
+  splitCity?: string;
+  splitStation?: string;
+  nearbyStation?: { station: string; distanceKm?: number } | string;
+  legs?: Array<{
+    trainNumber: string;
+    trainName: string;
+    from: string;
+    to: string;
+    departure: string;
+    arrival: string;
+    status?: string;
+  }>;
 }
 
 export interface RouteResult {
@@ -102,7 +108,6 @@ export interface RouteResult {
   directStatus?: BookingStatus;
   directWL?: number;
   generated?: boolean;
-  stats?: OperationalStats;
 }
 
 // â”€â”€ Auth / Accounts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

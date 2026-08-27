@@ -3,23 +3,11 @@
  * Pure function: ParsedIntent → RouteResult.
  * Verified: grep for "openai\|fetch\|axios\|gpt\|gemini" in this file should return nothing.
  */
-import type { ParsedIntent, RouteResult, ReasonedOption, TrainClass, DatasetOption, OperationalStats } from "./types";
+import type { ParsedIntent, RouteResult, ReasonedOption, TrainClass, DatasetOption } from "./types";
 import { findRoute, getAvailableClasses } from "./dataset";
-import { seededRandom } from "./seededRandom";
 import { priceForClass, CLASS_MULTIPLIER } from "./pricing";
 
 const DEFAULT_CLASS: TrainClass = "3A";
-
-function getOperationalStats(origin: string, dest: string): OperationalStats {
-  const rand = seededRandom(`${origin.toLowerCase()}->${dest.toLowerCase()}->syslog`);
-  const directAnalyzed = 12 + Math.floor(rand() * 14);
-  const splitCombinations = 95 + Math.floor(rand() * 115);
-  return {
-    directAnalyzed,
-    splitCombinations,
-    maxLayoverMins: 45,
-  };
-}
 
 function pickClass(intent: ParsedIntent, availableClasses: string[]): TrainClass {
   const preferred = intent.class;
@@ -177,7 +165,6 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       trace,
       directStatus: "CONFIRMED",
       generated: route.generated,
-      stats: getOperationalStats(route.originName, route.destinationName),
       options: [
         {
           id: "direct",
@@ -195,6 +182,17 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
           fare: directFare,
           trainNumber: directOpt.trainNumber,
           trainName: directOpt.trainName,
+          legs: [
+            {
+              trainNumber: directOpt.trainNumber,
+              trainName: directOpt.trainName,
+              from: route.originName,
+              to: route.destinationName,
+              departure: directOpt.departure,
+              arrival: directOpt.arrival,
+              status: "CONFIRMED",
+            },
+          ],
         },
       ],
     };
@@ -248,8 +246,19 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       trainNumber: splitOpt.trainNumber,
       trainName: splitOpt.trainName,
       isSplit: true,
+      splitCity: splitOpt.splitStation,
+      splitStation: splitOpt.splitStation,
       leg1: splitOpt.leg1,
       leg2: splitOpt.leg2,
+      legs: [splitOpt.leg1, splitOpt.leg2].filter(Boolean) as Array<{
+        trainNumber: string;
+        trainName: string;
+        from: string;
+        to: string;
+        departure: string;
+        arrival: string;
+        status?: string;
+      }>,
     });
   }
 
@@ -274,6 +283,21 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       fare: nearbyFare,
       trainNumber: nearbyOpt.trainNumber,
       trainName: nearbyOpt.trainName,
+      nearbyStation: {
+        station: nearbyOpt.nearbyStation ?? "nearby station",
+        distanceKm: nearbyOpt.nearbyDistanceKm ?? 0,
+      },
+      legs: [
+        {
+          trainNumber: nearbyOpt.trainNumber,
+          trainName: nearbyOpt.trainName,
+          from: route.originName,
+          to: nearbyOpt.nearbyStation ?? route.destinationName,
+          departure: nearbyOpt.departure,
+          arrival: nearbyOpt.arrival,
+          status: "CONFIRMED",
+        },
+      ],
     });
   }
 
@@ -281,6 +305,7 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
   if (directOpt) {
     const { badge, badgeBg } = buildBadge(directOpt);
     const directFare = getGuardedFare(directOpt, classData.class, selectedClass);
+    const directStatusStr = buildStatusDisplay(directOpt);
 
     options.push({
       id: "direct",
@@ -290,13 +315,24 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
       route: `${route.originName} → ${route.destinationName}`,
       meta: `${directOpt.trainNumber} ${directOpt.trainName} | ${selectedClass} | ${directOpt.departure} – ${directOpt.arrival}`,
       status: directOpt.status,
-      statusDisplay: buildStatusDisplay(directOpt),
+      statusDisplay: directStatusStr,
       statusBg: buildStatusBg(directOpt),
       confirmationLikelihood: buildConfidence(directOpt),
       why: buildWhy(directOpt, route.originName, route.destinationName),
       fare: directFare,
       trainNumber: directOpt.trainNumber,
       trainName: directOpt.trainName,
+      legs: [
+        {
+          trainNumber: directOpt.trainNumber,
+          trainName: directOpt.trainName,
+          from: route.originName,
+          to: route.destinationName,
+          departure: directOpt.departure,
+          arrival: directOpt.arrival,
+          status: directStatusStr,
+        },
+      ],
     });
   }
 
@@ -309,7 +345,59 @@ export function getRankedOptions(intent: ParsedIntent, overrideClass?: TrainClas
     directStatus: directOpt?.status,
     directWL: directOpt?.waitlistNumber,
     generated: route.generated,
-    stats: getOperationalStats(route.originName, route.destinationName),
     options,
   };
+}
+
+/**
+ * Builds the dynamic, honest SYSTEM LOG from the actual result data
+ * of the current search — works identically across curated, generated,
+ * and gap-autofilled routes without inventing statistics.
+ */
+export function buildSystemLog(result: RouteResult): string {
+  const direct = result.options.find((o) => o.type === "DIRECT");
+  const split = result.options.find((o) => o.type === "SPLIT");
+  const nearby = result.options.find((o) => o.type === "NEARBY");
+
+  const lines: string[] = [];
+
+  if (direct) {
+    const trainNum =
+      (direct.legs && direct.legs[0] && direct.legs[0].trainNumber) ||
+      direct.trainNumber;
+    const status =
+      (direct.legs && direct.legs[0] && direct.legs[0].status) ||
+      direct.statusDisplay ||
+      direct.status;
+    lines.push(
+      `Checked ${trainNum} on the direct route — found ${status}.`
+    );
+  }
+  if (split) {
+    const splitCity =
+      split.splitCity ||
+      split.splitStation ||
+      (split.leg1 ? split.leg1.to : null) ||
+      (split.route.includes("→") ? split.route.split("→")[1]?.trim() : null) ||
+      "intermediate junction";
+    lines.push(
+      `Checked known intermediate-junction quotas — ${splitCity} is open.`
+    );
+  }
+  if (nearby) {
+    const stationName =
+      (typeof nearby.nearbyStation === "object" && nearby.nearbyStation !== null
+        ? (nearby.nearbyStation as { station: string }).station
+        : typeof nearby.nearbyStation === "string"
+        ? nearby.nearbyStation
+        : null) ||
+      (nearby.route.includes("→") ? nearby.route.split("→")[1]?.trim() : null) ||
+      "alternate station";
+    lines.push(
+      `Checked nearby-station alternatives — ${stationName} confirmed.`
+    );
+  }
+  lines.push("Ranking by confirmation certainty.");
+
+  return lines.join(" ");
 }

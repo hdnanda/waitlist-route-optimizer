@@ -12,7 +12,7 @@ import {
   Sparkles,
   AlertCircle,
 } from "lucide-react";
-import { getRankedOptions } from "@/lib/engine";
+import { getRankedOptions, buildSystemLog } from "@/lib/engine";
 import { useApp } from "@/lib/context";
 import TicketCard from "@/components/TicketCard";
 import CustomDatePickerModal from "@/components/CustomDatePickerModal";
@@ -521,8 +521,8 @@ export default function ResultsPage() {
           >
             <div className="mb-2 mt-1 px-1">
               <p className="text-xs text-slate-400 leading-relaxed font-mono">
-                <span className="text-[#E8A33D] font-bold">SYSTEM LOG: </span> 
-                Analyzed {result.stats?.directAnalyzed ?? 18} direct trains and {result.stats?.splitCombinations ?? 142} intermediate split-route combinations along the {result.originDisplay}–{result.destinationDisplay} corridor for <span className="text-white font-bold">{parsedIntent.date}</span> ({activeClass} class). Excluded all routes with layovers &gt; {result.stats?.maxLayoverMins ?? 45} mins. Displaying the {result.options.length} highest-probability {result.options.length === 1 ? "option" : "options"}:
+                <span className="text-[#E8A33D] font-bold">SYSTEM LOG: </span>
+                {buildSystemLog(result)}
               </p>
             </div>
 
