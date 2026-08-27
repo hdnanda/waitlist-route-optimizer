@@ -31,11 +31,11 @@ const FAQS: FaqItem[] = [
   },
   {
     id: "delays",
-    question: "What if train 1 is delayed? Do I miss my connecting train?",
+    question: "Do I have to switch trains or change platforms during a split ticket?",
     icon: Clock,
-    badge: "SAFE LAYOVER BUFFER",
+    badge: "ZERO TRANSFER RISK",
     answer:
-      "Our optimizer prioritizes 'Same Train, Same Berth' splits where you stay on the train without de-boarding. For different-train connections, the algorithm enforces a minimum 45+ minute safety buffer at major junction stations.",
+      "No. All split-ticket options are issued on the exact same physical train and same berth. You remain seated throughout your journey without de-boarding. The split is purely an administrative PRS quota unlock across intermediate stations, eliminating connection and delay transfer risks.",
   },
   {
     id: "booking",

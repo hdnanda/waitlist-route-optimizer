@@ -121,32 +121,35 @@ export function generateRoute(
       ];
 
       if (!isDirectConfirmed) {
-        // SPLIT — always generated & confirmed when direct is WL
+        const sharedTrainNumber = trainNumber(rand);
+        const sharedTrainName = `${dest.name} Express`;
+
+        // SPLIT — always generated & confirmed when direct is WL (same physical train across both legs)
         options.push({
           type: "SPLIT",
-          trainNumber: trainNumber(rand),
-          trainName: `${junction.name} Express`,
+          trainNumber: sharedTrainNumber,
+          trainName: sharedTrainName,
           departure: "19:00",
           arrival: "10:30+1",
           duration: splitDurationStr,
           fare: splitPrice,
           status: "CONFIRMED",
           splitStation: `${junction.name} Jn`,
-          splitLayoverMinutes: Math.round((2 + rand() * 2) * 60),
+          splitLayoverMinutes: 0,
           leg1: {
-            trainNumber: trainNumber(rand),
-            trainName: `${junction.name} Express`,
+            trainNumber: sharedTrainNumber,
+            trainName: sharedTrainName,
             from: `${origin.name} (${origin.stationCode})`,
             to: `${junction.name} (${junction.stationCode})`,
             departure: "19:00",
             arrival: "02:30+1",
           },
           leg2: {
-            trainNumber: trainNumber(rand),
-            trainName: `${dest.name} Superfast Express`,
+            trainNumber: sharedTrainNumber,
+            trainName: sharedTrainName,
             from: `${junction.name} (${junction.stationCode})`,
             to: `${dest.name} (${dest.stationCode})`,
-            departure: "04:30+1",
+            departure: "02:35+1",
             arrival: "10:30+1",
           },
         });

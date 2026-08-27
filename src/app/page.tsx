@@ -441,7 +441,7 @@ export default function HomePage() {
                   <div>
                     <p className="text-xs font-bold text-white">2. Multi-quota split search</p>
                     <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
-                      Explores intermediate PRS quotas, layover timing, and adjacent junctions.
+                      Explores intermediate PRS segment quotas and adjacent station inventory.
                     </p>
                   </div>
                 </div>
