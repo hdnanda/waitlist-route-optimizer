@@ -335,7 +335,7 @@ export default function ResultsPage() {
             </button>
           )}
           <span className={`rounded-full border px-3 py-1 text-[10px] font-mono ${parsedIntent.confidence === "high" ? "border-[#3F8F5F]/50 bg-[#3F8F5F]/15 text-[#3F8F5F] font-bold" : "border-white/10 bg-white/5 text-slate-400"}`}>
-            {parsedIntent.confidence === "high" ? "AI parsed" : "fallback parsed"}
+            {parsedIntent.confidence === "high" ? "Understood" : "Basic match"}
           </span>
         </div>
 
@@ -596,7 +596,7 @@ export default function ResultsPage() {
                         ["MOCK", "Chart prep happens 4 hours before departure. We monitor both split legs independently."],
                         ["MOCK", "If Leg 1 of a split fails to confirm at charting, we auto-fall back to the direct waitlist or next available train."],
                         ["MOCK", "TDR/refund: a cancelled split leg is filed via TDR within 72 hrs automatically — no manual action needed."],
-                        ["REAL PLAN", "The AI does not calculate routes or times. A deterministic backend computes split-ticket permutations, quota checks, and layovers. The OpenAI model is used only to (1) parse the user's natural-language request and (2) write the plain-language explanations."],
+                        ["REAL PLAN", "Understanding what you typed is handled entirely by a custom-built parsing engine that runs locally, with no live call to any AI provider at request time. It strips conversational filler ('no wait,' 'I mean'), resolves inverted phrasing ('to Kolkata from Pune'), fuzzy-matches typos and Hindi transliterations, and disambiguates multiple city mentions in one sentence. AI coding tools (ChatGPT, Codex, and Gemini) were used to help write and refine this engine — the engine itself runs independently, with no ongoing dependency on any external model."],
                         ["REAL PLAN", "Confidence percentages are static mock values standing in for what would be a historical clearance-rate calculation over real PRS chart data in production."],
                         ["REAL PLAN", "Payment deduction without ticket confirmation is IRCTC's most common real complaint. A production version would use idempotent payment intents with webhook-based reconciliation instead of IRCTC's current fire-and-forget flow."],
                         ["REAL PLAN", "Our 16 hand-modeled routes reflect realistic current train patterns. Any other route is generated on the spot using real geographic distance and known junction data — in production this layer would be replaced by live PRS queries, but the app never simply says no."],

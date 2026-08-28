@@ -53,23 +53,23 @@ const CLASS_ALIASES: [string, TrainClass][] = [
   ["non-ac", "SL"], ["स्लीपर", "SL"], ["slipar", "SL"], ["sleepar", "SL"], ["sleeper", "SL"], ["sl", "SL"],
 ];
 
+// ── Rule-based Comfort Language Class Inference ────────────────────────────
+export function inferClassFromComfortLanguage(text: string): TrainClass | null {
+  const hasAC = /\b(ac|air.?condition|aaram se|comfortabl)/i.test(text);
+  const hasElderlySleep = /\b(seedha let|theek se so|properly sleep)/i.test(text);
+  const hasBareSleepMention = /\bso(na|ye)/i.test(text) && !hasAC && !hasElderlySleep;
+
+  if (hasAC || hasElderlySleep) return "3A";
+  if (hasBareSleepMention) return null; // too weak alone — defer to class quick-select chips
+  return null;
+}
+
 // ── Sentiment & Comfort Intent Rules for Seat Class ─────────────────────────
 export const SENTIMENT_CLASS_RULES: Array<{
   patterns: RegExp[];
   trainClass: TrainClass;
   reason: string;
 }> = [
-  // Sleep / Berth Need -> SL (or Sleeper)
-  {
-    patterns: [
-      /\b(i want to sleep|want to sleep|need to sleep|to sleep|sleeping|sleep)\b/i,
-      /\b(so ke jana|so ke jaana|sona hai|sone ke liye|neend leni|so kar)\b/i,
-      /\b(सो के जाना|सोना है|सोने के लिए|नींद)\b/i,
-      /\b(berth|sleeping berth|lie down|flat bed)\b/i,
-    ],
-    trainClass: "SL",
-    reason: "Sleep / lying-down berth requested",
-  },
   // Luxury / First Class / VIP -> 1A
   {
     patterns: [
@@ -108,6 +108,12 @@ export const SENTIMENT_CLASS_RULES: Array<{
 ];
 
 export function extractSentimentClass(text: string): { trainClass: TrainClass | null; reason: string | null } {
+  // First check rule-based comfort language
+  const comfortClass = inferClassFromComfortLanguage(text);
+  if (comfortClass) {
+    return { trainClass: comfortClass, reason: "Comfort / AC travel requested" };
+  }
+
   for (const rule of SENTIMENT_CLASS_RULES) {
     for (const pat of rule.patterns) {
       if (pat.test(text)) {
